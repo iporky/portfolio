@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #050505;
+  --bg-surface: #0a0d17;
+  --accent-cyan: #00f5d4;
+  --accent-neon-green: #00ff66;
+  --accent-teal: #00f0ff;
+  --accent-crimson: #ff2a5f;
+  --text-main: rgba(255, 255, 255, 0.95);
+  --text-muted: rgba(255, 255, 255, 0.60);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Curtis Nguyen Signature Stat Stage & Tools Tokens */
+  --primary-green-neon: #9df133;
+  --primary-green-box: #84c72f;
+  --primary-green-box-stroke: #599f00;
+  --primary-green-line: rgba(89, 159, 0, 0.35);
+  --curtis-black-box: #0a0a0a;
+  --curtis-black-stroke: #000000;
+  --curtis-notch-shape: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 125px,
+    11.71px 113px,
+    11.71px 52px,
+    0 40px
+  );
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  overflow-x: hidden;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  selection-background-color: #9df133;
+  selection-color: #050505;
+}
+
+::selection {
+  background: #9df133;
+  color: #050505;
+}
+
+/* Custom Cyber Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 212, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 212, 0.7);
+}
+
+/* Curtis Vertical Guidelines (6 Columns across full viewport) */
+.shared-grid-lines {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.shared-v-line {
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+}
+
+/* Curtis Polygon Notch Cutouts */
+.curtis-notch {
+  clip-path: polygon(
+    0% 5px,
+    5px 0%,
+    calc(100% - 5px) 0%,
+    100% 5px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0% 100%
+  );
+}
+
+.cyber-notch {
+  clip-path: polygon(
+    0% 8px,
+    8px 0%,
+    calc(100% - 8px) 0%,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0% calc(100% - 8px)
+  );
+}
+
+.cyber-notch-sm {
+  clip-path: polygon(
+    0% 4px,
+    4px 0%,
+    calc(100% - 4px) 0%,
+    100% 4px,
+    100% calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    4px 100%,
+    0% calc(100% - 4px)
+  );
+}
+
+/* Scanline Overlay */
+.scanline {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0, 0, 0, 0.35) 50%,
+    rgba(0, 0, 0, 0.35)
+  );
+  background-size: 100% 4px;
+}
+
+/* Subtle CRT Chromatic Aberration */
+.crt-rgb {
+  filter: drop-shadow(2px 0 0 rgba(255, 0, 85, 0.4)) drop-shadow(-2px 0 0 rgba(0, 245, 212, 0.4));
+}
+
+/* Cyber Grid Backgrounds */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Glassmorphism Panel */
+.cyber-glass {
+  background: rgba(10, 13, 23, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
