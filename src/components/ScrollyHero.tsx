@@ -13,17 +13,21 @@ const INITIAL_BURST_FRAMES = 25;
 export default function ScrollyHero() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { playClick, playHover, playSuccess } = useSound();
-  const { scrollProgress } = useHorizontalScroll();
+  const { scrollProgress, isDesktop } = useHorizontalScroll();
 
   const [images, setImages] = useState<HTMLImageElement[]>([]);
   const [loadProgress, setLoadProgress] = useState<number>(0);
   const [isInitialLoaded, setIsInitialLoaded] = useState<boolean>(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
+  const [mobileSelectedPhase, setMobileSelectedPhase] = useState<number>(1);
   const lastPhaseRef = useRef<number>(1);
 
   const targetFrameRef = useRef<number>(0);
   const currentFrameRef = useRef<number>(0);
   const imagesRef = useRef<HTMLImageElement[]>([]);
+
+  const touchStartX = useRef<number>(0);
+  const touchStartFrame = useRef<number>(0);
 
   // 1. Preload 181 WebP frames
   useEffect(() => {
@@ -141,7 +145,9 @@ export default function ScrollyHero() {
       if (!canvas) return;
       const dpr = window.devicePixelRatio || 1;
       const width = canvas.parentElement?.clientWidth || window.innerWidth;
-      const height = window.innerHeight;
+      const height = isDesktop
+        ? window.innerHeight
+        : canvas.parentElement?.clientHeight || Math.min(420, window.innerHeight * 0.45);
 
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -158,12 +164,14 @@ export default function ScrollyHero() {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [renderFrame]);
+  }, [renderFrame, isDesktop]);
 
-  // Avatar sequence is pinned on-screen between 0.13 and 0.29, scrubbing frames 1-181 from 0.13 to 0.25 with cushion
+  // Avatar sequence is pinned on-screen between 0.13 and 0.29 on desktop
   const localProg = Math.min(1, Math.max(0, (scrollProgress - 0.13) / 0.12));
 
   useEffect(() => {
+    if (!isDesktop) return;
+
     targetFrameRef.current = localProg * (TOTAL_FRAMES - 1);
 
     let currentPhase = 1;
@@ -176,7 +184,27 @@ export default function ScrollyHero() {
       if (currentPhase === 4) playSuccess();
       else playHover();
     }
-  }, [localProg, playHover, playSuccess]);
+  }, [localProg, playHover, playSuccess, isDesktop]);
+
+  // Touch scrubbing on mobile canvas
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartFrame.current = currentFrameRef.current;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const diffX = e.touches[0].clientX - touchStartX.current;
+    const frameDelta = (diffX / (window.innerWidth || 360)) * TOTAL_FRAMES * 1.2;
+    const newTarget = Math.min(TOTAL_FRAMES - 1, Math.max(0, touchStartFrame.current + frameDelta));
+    targetFrameRef.current = newTarget;
+
+    const prog = newTarget / (TOTAL_FRAMES - 1);
+    let p = 1;
+    if (prog > 0.73) p = 4;
+    else if (prog > 0.48) p = 3;
+    else if (prog > 0.22) p = 2;
+    setMobileSelectedPhase(p);
+  };
 
   // Smooth lerp loop
   useEffect(() => {
@@ -213,28 +241,73 @@ export default function ScrollyHero() {
     return 4;
   };
 
-  const currentPhase = getPhase();
+  const currentPhase = isDesktop ? getPhase() : mobileSelectedPhase;
+
+  const chapters = [
+    { id: 1, label: "01 // DEEP WORK", short: "01 WORKSTATION", frame: 0 },
+    { id: 2, label: "02 // ARCHITECTURE", short: "02 AI RUNTIMES", frame: 55 },
+    { id: 3, label: "03 // LEADERSHIP", short: "03 VELOCITY", frame: 115 },
+    { id: 4, label: "04 // GREETING", short: "04 GREETING", frame: 180 },
+  ];
 
   return (
     <section
       id="scrolly-greeting"
-      className="relative w-screen h-screen shrink-0 bg-[#050505] selection:bg-[#9df133] selection:text-black flex items-center justify-center overflow-hidden border-x border-white/[0.06]"
+      className="relative w-full lg:w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] selection:bg-[#9df133] selection:text-black flex flex-col items-center justify-center overflow-visible lg:overflow-hidden border-t lg:border-t-0 lg:border-x border-white/[0.06] py-12 lg:py-0 px-4 sm:px-8 lg:px-0"
     >
-      {/* Canvas Engine */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full block z-0 cursor-default"
-      />
+      {/* Mobile Chapter Selector Bar (Touch buttons to jump between avatar milestones) */}
+      <div className="flex lg:hidden flex-wrap items-center justify-center gap-2 mb-3 font-mono text-xs w-full max-w-xl z-20">
+        {chapters.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              setMobileSelectedPhase(item.id);
+              targetFrameRef.current = item.frame;
+              playClick();
+            }}
+            className={`px-3 py-1.5 rounded curtis-notch font-bold transition-all text-[10px] sm:text-xs ${
+              currentPhase === item.id
+                ? "bg-[#9df133] text-[#0a0a0a] shadow-[0_0_12px_rgba(157,241,51,0.4)]"
+                : "bg-white/[0.06] text-white/50 border border-white/10 hover:text-white"
+            }`}
+          >
+            {item.short}
+          </button>
+        ))}
+      </div>
 
-      {/* Seamless Edge Feathering Overlays */}
-      <div className="pointer-events-none absolute inset-0 z-10 bg-radial-[circle_at_center,transparent_45%,#050505_96%]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#050505] via-[#050505]/60 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-[#050505] via-[#050505]/60 to-transparent z-10" />
+      {/* Canvas Engine Container: Fullscreen absolute on desktop; responsive touch-scrubbable viewport on mobile/tablet */}
+      <div
+        className={
+          isDesktop
+            ? "absolute inset-0 w-full h-full block z-0 cursor-default"
+            : "relative w-full max-w-xl mx-auto h-[42vh] sm:h-[48vh] rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.9)] z-0 my-3 touch-none"
+        }
+      >
+        <canvas
+          ref={canvasRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          className="w-full h-full block cursor-ew-resize"
+        />
 
-      {/* Scanlines */}
-      <div className="pointer-events-none absolute inset-0 z-10 opacity-15 scanline" />
+        {/* Seamless Edge Feathering Overlays */}
+        <div className="pointer-events-none absolute inset-0 z-10 bg-radial-[circle_at_center,transparent_45%,#050505_96%]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-32 bg-gradient-to-b from-[#050505] via-[#050505]/60 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 sm:w-28 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 sm:w-28 bg-gradient-to-l from-[#050505] via-[#050505]/60 to-transparent z-10" />
+
+        {/* Scanlines */}
+        <div className="pointer-events-none absolute inset-0 z-10 opacity-15 scanline" />
+
+        {/* Mobile touch gesture cue */}
+        {!isDesktop && (
+          <div className="absolute bottom-2 inset-x-0 text-center font-mono text-[9px] text-[#9df133]/70 pointer-events-none z-20">
+            &larr; TOUCH &amp; DRAG HORIZONTALLY TO SCRUB AVATAR &rarr;
+          </div>
+        )}
+      </div>
 
       {/* Preloader HUD */}
       <AnimatePresence>
@@ -274,14 +347,9 @@ export default function ScrollyHero() {
         </div>
       </div>
 
-      {/* Left Chapter Indicator */}
-      <div className="absolute top-8 left-8 z-20 hidden md:flex flex-col gap-2 font-mono text-[11px]">
-        {[
-          { id: 1, label: "01 // DEEP WORK" },
-          { id: 2, label: "02 // ARCHITECTURE" },
-          { id: 3, label: "03 // LEADERSHIP" },
-          { id: 4, label: "04 // GREETING" },
-        ].map((item) => (
+      {/* Left Chapter Indicator (Desktop Only) */}
+      <div className="absolute top-8 left-8 z-20 hidden lg:flex flex-col gap-2 font-mono text-[11px]">
+        {chapters.map((item) => (
           <div
             key={item.id}
             className={`flex items-center gap-2 transition-all duration-300 ${
@@ -303,29 +371,29 @@ export default function ScrollyHero() {
       </div>
 
       {/* Parallax Narrative Overlays */}
-      <div className="relative z-20 w-full max-w-5xl mx-auto px-6 pointer-events-none">
+      <div className="relative z-20 w-full max-w-5xl mx-auto px-2 sm:px-6 pointer-events-auto">
         <AnimatePresence mode="wait">
           {currentPhase === 1 && (
             <motion.div
               key="phase-1"
-              initial={{ opacity: 0, y: 25 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-start max-w-xl pointer-events-auto"
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col items-start max-w-xl"
             >
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2.5 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
                 <Terminal className="w-3.5 h-3.5" />
                 <ScrambleText text="// 01 · ACTIVE TYPING & WORKSTATION" />
               </div>
-              <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-2">
+              <h2 className="text-3xl sm:text-6xl font-extrabold tracking-tight text-white mb-2">
                 <ScrambleText text="SHIVANG CHAUHAN" />
               </h2>
-              <p className="text-base sm:text-lg font-mono text-[#9df133] font-medium mb-3">
+              <p className="text-sm sm:text-lg font-mono text-[#9df133] font-medium mb-2.5">
                 SDE III &amp; Full-Stack Architect
               </p>
-              <p className="text-sm text-white/60 leading-relaxed mb-6 font-sans">
-                Deep at work engineering distributed architectures, conversational AI runtimes, and self-serve ad tech platforms. Continue scrolling right to see the sequence evolve.
+              <p className="text-xs sm:text-sm text-white/60 leading-relaxed mb-4 font-sans">
+                Deep at work engineering distributed architectures, conversational AI runtimes, and self-serve ad tech platforms. {isDesktop ? "Continue scrolling right to see the sequence evolve." : "Tap chapters or swipe avatar above."}
               </p>
             </motion.div>
           )}
@@ -333,20 +401,20 @@ export default function ScrollyHero() {
           {currentPhase === 2 && (
             <motion.div
               key="phase-2"
-              initial={{ opacity: 0, y: 25 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-end text-right ml-auto max-w-xl pointer-events-auto"
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col items-start lg:items-end text-left lg:text-right lg:ml-auto max-w-xl"
             >
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2.5 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
                 <Cpu className="w-3.5 h-3.5" />
                 <ScrambleText text="// 02 · TURNING FOCUS & AI RUNTIMES" />
               </div>
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white mb-2">
+              <h2 className="text-2xl sm:text-5xl font-bold tracking-tight text-white mb-2">
                 Autonomous <span className="text-[#9df133]">AI Runtimes</span>
               </h2>
-              <p className="text-sm text-white/60 leading-relaxed mb-6 font-sans">
+              <p className="text-xs sm:text-sm text-white/60 leading-relaxed mb-4 font-sans">
                 FastAPI microservices, Redis-backed state, and 4-service RAG pipelines (34 intents, pgvector, Kafka) with Google GenAI &amp; Naver.
               </p>
               <div className="grid grid-cols-2 gap-3 text-left font-mono text-xs w-full max-w-sm">
@@ -365,20 +433,20 @@ export default function ScrollyHero() {
           {currentPhase === 3 && (
             <motion.div
               key="phase-3"
-              initial={{ opacity: 0, y: 25 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-start max-w-xl pointer-events-auto"
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col items-start max-w-xl"
             >
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-3 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2.5 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
                 <Layers className="w-3.5 h-3.5" />
                 <ScrambleText text="// 03 · FRONTEND LEAD & VELOCITY" />
               </div>
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white mb-2">
+              <h2 className="text-2xl sm:text-5xl font-bold tracking-tight text-white mb-2">
                 Solo Output, <span className="text-[#9df133]">Team Scale</span>
               </h2>
-              <p className="text-sm text-white/60 leading-relaxed mb-4 font-sans">
+              <p className="text-xs sm:text-sm text-white/60 leading-relaxed mb-4 font-sans">
                 Deep mastery in modern React, Next.js, TypeScript, React Native / Expo, Redux-Saga, WebSockets, and Pyright monorepos.
               </p>
             </motion.div>
@@ -390,27 +458,30 @@ export default function ScrollyHero() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center text-center max-w-xl mx-auto pointer-events-auto"
+              transition={{ duration: 0.4 }}
+              className="flex flex-col items-center text-center max-w-xl mx-auto"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3 py-1 mb-2.5 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
                 <ScrambleText text="// 04 · GREETING & COLLABORATION" />
               </div>
-              <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-3">
+              <h2 className="text-3xl sm:text-6xl font-extrabold tracking-tight text-white mb-2.5">
                 &ldquo;Hey there! Let&apos;s build <span className="text-[#9df133]">together.</span>&rdquo;
               </h2>
-              <p className="text-sm text-white/70 leading-relaxed mb-6 font-sans">
-                Resilient architectures, agentic AI workflows, and buttery smooth user interfaces. Keep scrolling to explore selected applications.
+              <p className="text-xs sm:text-sm text-white/70 leading-relaxed mb-4 font-sans">
+                Resilient architectures, agentic AI workflows, and buttery smooth user interfaces.
               </p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Bottom Subtitle */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 font-mono text-xs text-white/40 pointer-events-none">
+      {/* Bottom Subtitle / Cue */}
+      <div className="hidden lg:block absolute bottom-6 left-1/2 -translate-x-1/2 z-20 font-mono text-xs text-white/40 pointer-events-none">
         [SCROLL TO GLIDE RIGHT TO PRODUCTS &rarr;]
+      </div>
+      <div className="block lg:hidden text-center mt-6 font-mono text-xs text-white/40">
+        [SWIPE DOWN FOR CORE CAPABILITIES &amp; TOOLS &darr;]
       </div>
     </section>
   );

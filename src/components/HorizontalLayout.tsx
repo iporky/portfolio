@@ -9,6 +9,7 @@ interface HorizontalScrollContextType {
   totalWidth: number;
   scrollToProgress: (prog: number) => void;
   isLoaded: boolean;
+  isDesktop: boolean;
 }
 
 const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
@@ -17,6 +18,7 @@ const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
   totalWidth: 0,
   scrollToProgress: () => {},
   isLoaded: false,
+  isDesktop: true,
 });
 
 export const useHorizontalScroll = () => useContext(HorizontalScrollContext);
@@ -28,6 +30,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrollX, setScrollX] = useState(0);
   const [totalWidth, setTotalWidth] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   // Preloader / Boot Barrier State
   const [isLoaded, setIsLoaded] = useState(false);
@@ -35,6 +38,16 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
 
   const targetProgressRef = useRef(0);
   const currentProgressRef = useRef(0);
+
+  // Responsive breakpoint tracking (>= 1024px is desktop)
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    checkViewport();
+    window.addEventListener("resize", checkViewport);
+    return () => window.removeEventListener("resize", checkViewport);
+  }, []);
 
   // 1. Initial Mount: Block scroll restoration & run Boot Barrier
   useEffect(() => {
@@ -83,8 +96,10 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
     }
   }, [isLoaded]);
 
-  // 3. Calculate dimensions and update on resize
+  // 3. Calculate dimensions and update on resize (Desktop only)
   useEffect(() => {
+    if (!isDesktop) return;
+
     const updateDimensions = () => {
       if (trackRef.current) {
         const scrollWidth = trackRef.current.scrollWidth;
@@ -97,10 +112,27 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
-  }, []);
+  }, [isDesktop]);
 
-  // 4. Map vertical scroll of tall outer container to horizontal translation with slew-rate limiting (Prevents skipping 3-4 screens)
+  // 4. Scroll Handling:
+  // - On Desktop: Maps vertical scroll of tall 1200vh container to horizontal translation with slew-rate limiting
+  // - On Mobile/Tablet: Natural vertical native scrolling with vertical scroll progress calculation
   useEffect(() => {
+    if (!isLoaded) return;
+
+    if (!isDesktop) {
+      // Natural vertical scroll tracking for mobile & tablet
+      const onMobileScroll = () => {
+        const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const prog = Math.min(1, Math.max(0, window.scrollY / scrollable));
+        setScrollProgress(prog);
+      };
+
+      window.addEventListener("scroll", onMobileScroll, { passive: true });
+      onMobileScroll();
+      return () => window.removeEventListener("scroll", onMobileScroll);
+    }
+
     let animId: number;
 
     const onScroll = () => {
@@ -134,20 +166,6 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
           const W = window.innerWidth;
 
           // Pinned Timeline Stages with Dedicated Cushions for Every Screen (6 Slides total)
-          // 0.000 - 0.090: Pin Slide 0 (Curtis Hero) [Quote unscrambles 0.003-0.040, cushion 0.040-0.090]
-          // 0.090 - 0.130: Trans Slide 0 -> 1 (Hero -> Avatar Canvas)
-          // 0.130 - 0.290: Pin Slide 1 (ScrollyHero 181 frames scrub 0.13-0.25, cushion 0.25-0.29)
-          // 0.290 - 0.330: Trans Slide 1 -> 2 (Avatar -> Bento Screen 1, Pixel Wipe 0.28-0.34)
-          // 0.330 - 0.390: Pin Bento Screen 1 (Chessboard tools load 0.32-0.36, tight comfortable cushion 0.36-0.39)
-          // 0.390 - 0.420: Trans Bento Screen 1 -> Screen 2 (Slide across 200vw track)
-          // 0.420 - 0.480: Pin Bento Screen 2 (9 tech tiles load 0.41-0.45, tight comfortable cushion 0.45-0.48)
-          // 0.480 - 0.520: Trans Bento Screen 2 -> Selected Products (Pixel Wipe 0.47-0.53 from right)
-          // 0.520 - 0.600: Pin Slide 4 (Selected Products, cards reveal 0.522-0.570, cushion 0.570-0.600)
-          // 0.600 - 0.640: Trans Products -> Outcomes
-          // 0.640 - 0.760: Pin Slide 5 (Impact Outcomes, cards reveal 0.655-0.730, cushion 0.730-0.760)
-          // 0.760 - 0.800: Trans Outcomes -> About Deck (Slide 5 -> Slide 6)
-          // 0.800 - 1.000: Pin Slide 6 (About Deck & Command Center -> Garage Door raises 0.860-0.940)
-
           let x = 0;
           if (prog <= 0.09) {
             x = 0;
@@ -203,14 +221,20 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(animId);
     };
-  }, [isLoaded]);
+  }, [isLoaded, isDesktop]);
 
-  // 5. Optional programmatic scroll helper
+  // 5. Programmatic scroll helper
   const scrollToProgress = (prog: number) => {
-    if (!outerContainerRef.current) return;
-    const totalScrollable = outerContainerRef.current.offsetHeight - window.innerHeight;
-    const targetY = prog * totalScrollable;
-    window.scrollTo({ top: targetY, behavior: "smooth" });
+    if (isDesktop) {
+      if (!outerContainerRef.current) return;
+      const totalScrollable = outerContainerRef.current.offsetHeight - window.innerHeight;
+      const targetY = prog * totalScrollable;
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    } else {
+      const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const targetY = prog * scrollable;
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    }
   };
 
   return (
@@ -221,42 +245,59 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
         totalWidth,
         scrollToProgress,
         isLoaded,
+        isDesktop,
       }}
     >
-      {/* Tall outer scroll container converting vertical scroll to horizontal */}
+      {/* Outer scroll container: 1200vh on Desktop for horizontal translation; auto on Mobile/Tablet */}
       <div
         ref={outerContainerRef}
         className="relative w-full bg-[#050505]"
-        style={{ height: "1200vh" }}
+        style={{ height: isDesktop ? "1200vh" : "auto" }}
       >
-        {/* Sticky 100vw x 100vh Viewport */}
-        <div className="sticky top-0 left-0 w-screen h-screen overflow-hidden bg-[#050505]">
-          {/* Moving Horizontal Track */}
+        {/* Sticky 100vw x 100vh Viewport on Desktop; Native vertical flow on Mobile/Tablet */}
+        <div
+          className={`w-full bg-[#050505] ${
+            isDesktop
+              ? "sticky top-0 left-0 w-screen h-screen overflow-hidden"
+              : "relative min-h-screen overflow-visible"
+          }`}
+        >
+          {/* Moving Horizontal Track on Desktop; Vertical flex column on Mobile/Tablet */}
           <div
             ref={trackRef}
-            className="flex h-full w-max will-change-transform"
-            style={{ transform: "translate3d(0, 0, 0)" }}
+            className={
+              isDesktop
+                ? "flex h-full w-max will-change-transform"
+                : "flex flex-col w-full h-auto"
+            }
+            style={{
+              transform: isDesktop ? `translate3d(-${scrollX}px, 0, 0)` : "none",
+            }}
           >
             {children}
           </div>
 
-          {/* Fullscreen Staggered Pixel Wipe Transitions (Reveals from Right, Reference Image 5) */}
-          <PixelTransition
-            scrollProgress={scrollProgress}
-            triggerStart={0.28}
-            triggerEnd={0.34}
-            columns={14}
-            rows={9}
-            color="#050505"
-          />
-          <PixelTransition
-            scrollProgress={scrollProgress}
-            triggerStart={0.47}
-            triggerEnd={0.53}
-            columns={14}
-            rows={9}
-            color="#9df133"
-          />
+          {/* Fullscreen Staggered Pixel Wipe Transitions (Desktop Only) */}
+          {isDesktop && (
+            <>
+              <PixelTransition
+                scrollProgress={scrollProgress}
+                triggerStart={0.28}
+                triggerEnd={0.34}
+                columns={14}
+                rows={9}
+                color="#050505"
+              />
+              <PixelTransition
+                scrollProgress={scrollProgress}
+                triggerStart={0.47}
+                triggerEnd={0.53}
+                columns={14}
+                rows={9}
+                color="#9df133"
+              />
+            </>
+          )}
         </div>
       </div>
 

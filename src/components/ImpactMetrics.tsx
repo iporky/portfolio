@@ -9,7 +9,7 @@ import ScrambleText from "./ScrambleText";
 
 export default function ImpactMetrics() {
   const { playHover } = useSound();
-  const { scrollProgress } = useHorizontalScroll();
+  const { scrollProgress, isDesktop } = useHorizontalScroll();
 
   const fortune500 = [
     {
@@ -68,7 +68,7 @@ export default function ImpactMetrics() {
   };
 
   return (
-    <section id="impact" className="relative w-screen max-w-screen h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#9df133] selection:text-black">
+    <section id="impact" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white border-t lg:border-t-0 lg:border-r border-white/[0.06] overflow-visible lg:overflow-hidden flex flex-col justify-center px-4 sm:px-8 lg:px-12 py-16 lg:py-8 selection:bg-[#9df133] selection:text-black">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -99,7 +99,7 @@ export default function ImpactMetrics() {
           </p>
         </div>
 
-        {/* 3 Columns Layout: Fortune 500s, NGOs, Startup - Staggered Load One by One on Scroll */}
+        {/* 3 Columns Layout: Fortune 500s, NGOs, Startup */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch">
           {/* Col 1: 3 Fortune 500s (5 cols) */}
           <div className="lg:col-span-5 space-y-2 sm:space-y-2.5">
@@ -109,7 +109,7 @@ export default function ImpactMetrics() {
             </div>
 
             {fortune500.map((f500) => {
-              const isRevealed = scrollProgress >= f500.threshold || scrollProgress >= 0.74;
+              const isRevealed = !isDesktop || scrollProgress >= f500.threshold || scrollProgress >= 0.74;
               return (
                 <div
                   key={f500.name}
@@ -154,7 +154,7 @@ export default function ImpactMetrics() {
 
             <div className="flex-1 flex flex-col justify-between gap-2 sm:gap-2.5">
               {ngos.map((ngo) => {
-                const isRevealed = scrollProgress >= ngo.threshold || scrollProgress >= 0.74;
+                const isRevealed = !isDesktop || scrollProgress >= ngo.threshold || scrollProgress >= 0.74;
                 return (
                   <div
                     key={ngo.name}
@@ -194,7 +194,7 @@ export default function ImpactMetrics() {
             </div>
 
             {(() => {
-              const isRevealed = scrollProgress >= startup.threshold || scrollProgress >= 0.74;
+              const isRevealed = !isDesktop || scrollProgress >= startup.threshold || scrollProgress >= 0.74;
               return (
                 <div
                   onMouseEnter={playHover}

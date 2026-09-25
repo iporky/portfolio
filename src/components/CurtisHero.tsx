@@ -11,7 +11,7 @@ import ScrambleText from "./ScrambleText";
 
 export default function CurtisHero() {
   const { soundEnabled, toggleSound, playClick, playHover } = useSound();
-  const { scrollProgress, scrollToProgress } = useHorizontalScroll();
+  const { scrollProgress, scrollToProgress, isDesktop } = useHorizontalScroll();
   const [timeStr, setTimeStr] = useState<string>("5:30 PM");
 
   useEffect(() => {
@@ -30,8 +30,18 @@ export default function CurtisHero() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleNextSection = () => {
+    playClick();
+    if (isDesktop) {
+      scrollToProgress(0.18);
+    } else {
+      const el = document.getElementById("scrolly-greeting");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
-    <section className="relative w-screen h-screen shrink-0 bg-[#050505] text-white overflow-hidden flex flex-col justify-between pt-6 pb-6 px-6 sm:px-12 selection:bg-[#9df133] selection:text-black">
+    <section className="relative w-full lg:w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between pt-6 pb-6 px-4 sm:px-8 lg:px-12 selection:bg-[#9df133] selection:text-black">
       {/* 6-Column Vertical Guidelines (Curtis Style) */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -85,10 +95,7 @@ export default function CurtisHero() {
 
         {/* Curtis Polygon Menu Button */}
         <button
-          onClick={() => {
-            playClick();
-            scrollToProgress(0.18);
-          }}
+          onClick={handleNextSection}
           onMouseEnter={playHover}
           className="group relative flex items-center justify-center h-8 px-4 curtis-notch bg-[#9df133]/10 border border-[#9df133]/30 hover:bg-[#9df133] hover:text-black transition-all cursor-pointer"
         >
@@ -97,16 +104,16 @@ export default function CurtisHero() {
           <span className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b border-l border-[#9df133]" />
           <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b border-r border-[#9df133]" />
           <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#9df133] group-hover:text-black">
-            EXPLORE &rarr;
+            {isDesktop ? "EXPLORE →" : "EXPLORE ↓"}
           </span>
         </button>
       </header>
 
       {/* Main Hero Body: Freestanding Glitch Portrait (LEFT) + Headline & Scroll-Scrambled Quote (RIGHT) */}
-      <div className="relative z-20 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center max-w-7xl mx-auto w-full h-[78vh]">
+      <div className="relative z-20 my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center max-w-7xl mx-auto w-full h-auto lg:h-[78vh] py-6 lg:py-0">
         {/* Left Column: Freestanding Portrait with Rich Glitch Overlay */}
         <div className="lg:col-span-5 relative h-full flex items-center justify-center lg:justify-start">
-          <GlitchPortrait className="w-full max-w-[440px] h-[55vh] sm:h-[65vh] xl:h-[72vh]" />
+          <GlitchPortrait className="w-full max-w-[320px] sm:max-w-[400px] lg:max-w-[440px] h-[340px] sm:h-[440px] lg:h-[55vh] xl:h-[72vh] mx-auto" />
         </div>
 
         {/* Right Column: Reference Image 1 Layout (Giant Name SHIVANG CHAUHAN + Green Badge + Quote) */}
@@ -120,7 +127,7 @@ export default function CurtisHero() {
 
           {/* Acid-Green Role Badge (Enlarged Designation) */}
           <div className="mb-4 sm:mb-5">
-            <span className="inline-block px-4 sm:px-5 py-2 sm:py-2.5 rounded curtis-notch font-mono text-sm sm:text-base md:text-lg font-black uppercase tracking-wider bg-[#b4f000] text-[#050505] shadow-[0_0_24px_rgba(180,240,0,0.5)]">
+            <span className="inline-block px-4 sm:px-5 py-2 sm:py-2.5 rounded curtis-notch font-mono text-xs sm:text-base md:text-lg font-black uppercase tracking-wider bg-[#b4f000] text-[#050505] shadow-[0_0_24px_rgba(180,240,0,0.5)]">
               LEAD FULL-STACK &amp; AGENTIC AI ARCHITECT
             </span>
           </div>
@@ -128,7 +135,7 @@ export default function CurtisHero() {
           {/* Giant Typographic Name with Entry Scramble Animation */}
           <div className="mb-4">
             <div className="flex items-baseline justify-between max-w-lg">
-              <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white leading-[0.88] select-none">
+              <h1 className="text-4xl sm:text-7xl lg:text-8xl font-black uppercase tracking-tight text-white leading-[0.92] select-none">
                 <span className="block text-white/95">
                   <ScrambleText text="SHIVANG" speed={25} delay={80} />
                 </span>
@@ -147,7 +154,7 @@ export default function CurtisHero() {
           <div className="mt-2 mb-2 max-w-xl">
             <ScrollScrambleText
               text="Great products are crafted by discords, late night sessions and millions of Iterations. So : "
-              scrollProgress={scrollProgress}
+              scrollProgress={isDesktop ? scrollProgress : 1}
               startThreshold={0.003}
               endThreshold={0.040}
               prefix=">>"
@@ -157,7 +164,7 @@ export default function CurtisHero() {
 
           {/* Reference Image 3 & Image 2: Direction of Scroll Cue with Exact Green Pixel Arrow */}
           <div className="mt-2">
-            <PixelScrollCue scrollProgress={scrollProgress} />
+            <PixelScrollCue scrollProgress={isDesktop ? scrollProgress : 1} />
           </div>
         </div>
       </div>
@@ -166,19 +173,21 @@ export default function CurtisHero() {
       <footer className="relative z-30 pt-3 border-t border-white/[0.06] flex items-center justify-between font-mono text-xs text-white/50">
         <div className="flex items-center gap-3">
           <span className="text-[#9df133] font-semibold uppercase tracking-wider">
-            HORIZONTAL TIMELINE
+            {isDesktop ? "HORIZONTAL TIMELINE" : "MOBILE TOUCH VIEW"}
           </span>
           <span className="text-white/20">|</span>
-          <span className="text-white/40">SCROLL DOWN TO GLIDE RIGHT &rarr;</span>
+          <span className="text-white/40">
+            {isDesktop ? "SCROLL DOWN TO GLIDE RIGHT →" : "SWIPE DOWN TO EXPLORE ↓"}
+          </span>
         </div>
 
         <button
-          onClick={() => scrollToProgress(0.18)}
+          onClick={handleNextSection}
           onMouseEnter={playHover}
           className="flex items-center gap-2 text-white/70 hover:text-[#9df133] transition-colors"
         >
           <span>NEXT: SCROLLYTELLING SEQUENCE</span>
-          <ArrowRight className="w-4 h-4 text-[#9df133]" />
+          <ArrowRight className={`w-4 h-4 text-[#9df133] ${!isDesktop ? "rotate-90" : ""}`} />
         </button>
       </footer>
     </section>

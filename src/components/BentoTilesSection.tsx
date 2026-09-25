@@ -89,7 +89,7 @@ function CurtisOdometer({
 
 export default function BentoTilesSection({ scrollProgress: propProgress }: BentoTilesSectionProps) {
   const { playHover } = useSound();
-  const { scrollProgress: ctxProgress } = useHorizontalScroll();
+  const { scrollProgress: ctxProgress, isDesktop } = useHorizontalScroll();
   const scrollProgress = propProgress !== undefined ? propProgress : ctxProgress;
 
   // Track hover on any box for the pitch black card inversion
@@ -297,15 +297,15 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
   ];
 
   // Helper function to render a tile in the exact Curtis geometric notch style
-  const renderCurtisTile = (tile: any, screenProgress: number) => {
+  const renderCurtisTile = (tile: any, screenProgress: number, isMobile = false) => {
     const isHovered = hoveredBox === tile.id;
 
     // Fast-loading aperture animation:
     // With tile.delay in [0.0, 0.30] and duration 0.15, all tiles reach 1.0 by screenProgress = 0.45!
-    const tProgress = Math.min(1, Math.max(0, (screenProgress - tile.delay) / 0.15));
-    const oh = Math.min(1, Math.max(0, tProgress / 0.45));
-    const ow = Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
-    const odoProg = Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
+    const tProgress = isMobile ? 1 : Math.min(1, Math.max(0, (screenProgress - tile.delay) / 0.15));
+    const oh = isMobile ? 1 : Math.min(1, Math.max(0, tProgress / 0.45));
+    const ow = isMobile ? 1 : Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
+    const odoProg = isMobile ? 1 : Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
 
     // Custom CSS grid position classes for desktop 5-column alternating chessboard
     const colClasses: Record<number, string> = {
@@ -327,16 +327,30 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
     return (
       <div
         key={tile.id}
+        onClick={() => {
+          setHoveredBox(hoveredBox === tile.id ? null : tile.id);
+          playHover();
+        }}
+        onTouchStart={() => {
+          setHoveredBox(tile.id);
+          playHover();
+        }}
         onMouseEnter={() => {
           setHoveredBox(tile.id);
           playHover();
         }}
         onMouseLeave={() => setHoveredBox(null)}
-        className={`stat-box group absolute w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] select-none cursor-pointer transition-all duration-200 ${desktopPos}`}
+        className={
+          isMobile
+            ? "stat-box group relative w-full h-[150px] min-h-[140px] select-none cursor-pointer transition-all duration-200"
+            : `stat-box group absolute w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] select-none cursor-pointer transition-all duration-200 ${desktopPos}`
+        }
         style={{
           // Curtis exact aperture reveal formula (100% open by progress = 0.45):
-          clipPath: `inset(calc((1 - ${oh}) * 50%) calc((1 - ${ow}) * (100% - 1px)) calc((1 - ${oh}) * 50%) 0)`,
-          willChange: "clip-path, transform",
+          clipPath: isMobile
+            ? undefined
+            : `inset(calc((1 - ${oh}) * 50%) calc((1 - ${ow}) * (100% - 1px)) calc((1 - ${oh}) * 50%) 0)`,
+          willChange: isMobile ? "transform" : "clip-path, transform",
         }}
       >
         {/* Outer Notch Border Stroke: Olive green by default, Pitch Black on Hover */}
@@ -490,10 +504,10 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
   return (
     <section
       id="capabilities-tiles"
-      className="relative w-[200vw] h-screen shrink-0 bg-[#9df133] text-[#0a0a0a] flex select-none overflow-hidden"
+      className="relative w-full lg:w-[200vw] h-auto lg:h-screen shrink-0 bg-[#9df133] text-[#0a0a0a] flex flex-col lg:flex-row select-none overflow-visible lg:overflow-hidden"
     >
-      {/* 6 Vertical Guidelines across Screen 1 & 2 */}
-      <div className="absolute inset-0 flex justify-between pointer-events-none z-0">
+      {/* 6 Vertical Guidelines across Screen 1 & 2 (Desktop only) */}
+      <div className="hidden lg:flex absolute inset-0 justify-between pointer-events-none z-0">
         <div className="w-px h-full bg-[#599f00]/30" />
         <div className="w-px h-full bg-[#599f00]/25" />
         <div className="w-px h-full bg-[#599f00]/25" />
@@ -508,11 +522,11 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
       </div>
 
       {/* ========================================================================= */}
-      {/* SCREEN 1: Authentic Curtis 5-Column Staggered Chessboard (100vw)          */}
+      {/* SCREEN 1: Authentic Curtis 5-Column Staggered Chessboard                  */}
       {/* ========================================================================= */}
-      <div className="relative w-screen h-screen shrink-0 flex flex-col justify-between p-6 sm:p-10 border-r border-[#599f00]/30 z-10">
+      <div className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#599f00]/30 z-10">
         {/* Top Header Bar (Matching Curtis telemetry) */}
-        <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#0a0a0a]">
               <polygon points="12 2 22 20 2 20" stroke="currentColor" strokeWidth="2.5" fill="none" />
@@ -532,9 +546,9 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           </div>
         </div>
 
-        {/* Screen 1 Canvas Area: 5 Alternating Staggered Columns */}
-        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto">
-          {screen1Tiles.map((tile) => renderCurtisTile(tile, s1Progress))}
+        {/* Screen 1 Canvas Area for Desktop (5 Alternating Staggered Columns) */}
+        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
+          {screen1Tiles.map((tile) => renderCurtisTile(tile, s1Progress, false))}
 
           {/* Freestanding Monochrome Pixel Art Pyramid in Column 1, Row 3 */}
           <div
@@ -551,6 +565,21 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           </div>
         </div>
 
+        {/* Screen 1 Grid Area for Mobile & Tablet (< 1024px) */}
+        <div className="relative w-full block lg:hidden my-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+            {screen1Tiles.map((tile) => renderCurtisTile(tile, s1Progress, true))}
+          </div>
+
+          {/* Pyramid on Mobile/Tablet */}
+          <div className="flex flex-col items-center justify-center p-4 my-4">
+            <CurtisPixelPyramid />
+            <span className="font-mono text-[9px] font-black text-[#0a0a0a] mt-2 uppercase tracking-widest">
+              // AGENTIC AI CORE
+            </span>
+          </div>
+        </div>
+
         {/* Bottom Continuity Banner */}
         <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#0a0a0a] pt-2 border-t-2 border-[#599f00]/40">
           <span className="flex items-center gap-2">
@@ -558,18 +587,18 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
             <span>CONTINUOUS CAPABILITIES RUNTIME</span>
           </span>
           <span className="tracking-widest flex items-center gap-2">
-            <span>SCROLL TO GLIDE INTO RAG, KAFKA &amp; BACKEND RUNTIMES</span>
+            <span className="hidden sm:inline">SCROLL TO GLIDE INTO RAG, KAFKA &amp; BACKEND RUNTIMES</span>
             <span className="text-[#0a0a0a] font-black">&rarr;</span>
           </span>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* SCREEN 2: Continuous Second Screen: Advanced AI, RAG, Kafka, K8s (100vw)  */}
+      {/* SCREEN 2: Continuous Second Screen: Advanced AI, RAG, Kafka, K8s           */}
       {/* ========================================================================= */}
-      <div className="relative w-screen h-screen shrink-0 flex flex-col justify-between p-6 sm:p-10 z-10">
+      <div className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 z-10 mt-8 lg:mt-0">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#0a0a0a]">
               <polygon points="12 2 22 20 2 20" stroke="currentColor" strokeWidth="2.5" fill="none" />
@@ -588,9 +617,16 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           </div>
         </div>
 
-        {/* Screen 2 Canvas Area: 5 Alternating Staggered Columns */}
-        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto">
-          {screen2Tiles.map((tile) => renderCurtisTile(tile, s2Progress))}
+        {/* Screen 2 Canvas Area for Desktop */}
+        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
+          {screen2Tiles.map((tile) => renderCurtisTile(tile, s2Progress, false))}
+        </div>
+
+        {/* Screen 2 Grid Area for Mobile & Tablet (< 1024px) */}
+        <div className="relative w-full block lg:hidden my-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+            {screen2Tiles.map((tile) => renderCurtisTile(tile, s2Progress, true))}
+          </div>
         </div>
 
         {/* Bottom Status Cue */}

@@ -9,7 +9,7 @@ import ScrambleText from "./ScrambleText";
 
 export default function SelectedProducts() {
   const { playClick, playHover } = useSound();
-  const { scrollProgress } = useHorizontalScroll();
+  const { scrollProgress, isDesktop } = useHorizontalScroll();
 
   const products = [
     {
@@ -65,7 +65,7 @@ export default function SelectedProducts() {
   ];
 
   return (
-    <section id="selected-products" className="relative w-screen max-w-screen h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#9df133] selection:text-black">
+    <section id="selected-products" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white border-t lg:border-t-0 lg:border-r border-white/[0.06] overflow-visible lg:overflow-hidden flex flex-col justify-center px-4 sm:px-8 lg:px-12 py-16 lg:py-8 selection:bg-[#9df133] selection:text-black">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -96,11 +96,11 @@ export default function SelectedProducts() {
           </p>
         </div>
 
-        {/* 4 Cards Grid - Staggered Appearance Tied to Scroll */}
+        {/* 4 Cards Grid - Staggered Appearance Tied to Scroll on Desktop, Immediately Visible on Mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {products.map((prod) => {
             const Icon = prod.icon;
-            const isRevealed = scrollProgress >= prod.threshold || scrollProgress >= 0.58;
+            const isRevealed = !isDesktop || scrollProgress >= prod.threshold || scrollProgress >= 0.58;
             return (
               <div
                 key={prod.title}

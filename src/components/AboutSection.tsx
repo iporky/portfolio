@@ -21,7 +21,7 @@ import DotMatrixBanner from "./DotMatrixBanner";
 
 export default function AboutSection() {
   const { playClick, playHover, playSuccess } = useSound();
-  const { scrollProgress, scrollToProgress } = useHorizontalScroll();
+  const { scrollProgress, scrollToProgress, isDesktop } = useHorizontalScroll();
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [manualGarageOpen, setManualGarageOpen] = useState(false);
@@ -53,8 +53,18 @@ export default function AboutSection() {
     : 1 - Math.pow(-2 * effectiveDoorProg + 2, 2) / 2;
   const translateYPercent = (1 - doorEase) * 100;
 
+  const handleGarageToggle = () => {
+    playClick();
+    if (isDesktop) {
+      setManualGarageOpen(!manualGarageOpen);
+    } else {
+      const el = document.getElementById("garage-footer");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
-    <section id="about" className="relative w-screen max-w-screen h-screen shrink-0 bg-[#050505] text-white overflow-hidden flex flex-col justify-between selection:bg-[#9df133] selection:text-black">
+    <section id="about" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between selection:bg-[#9df133] selection:text-black pt-6 pb-0">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -78,12 +88,12 @@ export default function AboutSection() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setManualGarageOpen(!manualGarageOpen)}
+            onClick={handleGarageToggle}
             onMouseEnter={playHover}
             className="px-2.5 py-1 rounded curtis-notch font-mono text-[10px] font-bold text-[#0a0a0a] bg-[#9df133] hover:bg-[#b4f000] transition-all flex items-center gap-1"
           >
             <ChevronUp className={`w-3 h-3 transition-transform ${effectiveDoorProg > 0.5 ? "rotate-180" : ""}`} />
-            <span>{effectiveDoorProg > 0.5 ? "CLOSE FOOTER" : "GARAGE DOOR ↓"}</span>
+            <span>{isDesktop ? (effectiveDoorProg > 0.5 ? "CLOSE FOOTER" : "GARAGE DOOR ↓") : "GO TO FOOTER ↓"}</span>
           </button>
         </div>
       </div>
@@ -274,7 +284,11 @@ export default function AboutSection() {
               <button
                 onClick={() => {
                   playClick();
-                  scrollToProgress(0);
+                  if (isDesktop) {
+                    scrollToProgress(0);
+                  } else {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
                 }}
                 onMouseEnter={playHover}
                 className="flex items-center gap-2 hover:text-[#9df133] transition-colors cursor-pointer"
@@ -288,13 +302,20 @@ export default function AboutSection() {
         </div>
       </div>
 
-      {/* GARAGE DOOR GREEN CARD (Exact Image 2 Structure: Raises on Scroll) */}
+      {/* GARAGE DOOR GREEN CARD:
+          - Desktop: Absolute 72vh card rising smoothly from bottom on scroll
+          - Mobile/Tablet: Natural full-width in-flow footer */}
       <div
-        className="absolute inset-x-0 bottom-0 z-40 bg-[#9df133] text-[#0a0a0a] shadow-[0_-24px_60px_rgba(0,0,0,0.85)] border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden"
+        id="garage-footer"
+        className={
+          isDesktop
+            ? "absolute inset-x-0 bottom-0 z-40 bg-[#9df133] text-[#0a0a0a] shadow-[0_-24px_60px_rgba(0,0,0,0.85)] border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden"
+            : "relative w-full bg-[#9df133] text-[#0a0a0a] shadow-2xl border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden mt-12"
+        }
         style={{
-          height: "72vh",
-          transform: `translate3d(0, ${translateYPercent}%, 0)`,
-          transition: "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+          height: isDesktop ? "72vh" : "auto",
+          transform: isDesktop ? `translate3d(0, ${translateYPercent}%, 0)` : "none",
+          transition: isDesktop ? "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)" : "none",
         }}
       >
         {/* Top Half of Green Card: CTA & Links */}

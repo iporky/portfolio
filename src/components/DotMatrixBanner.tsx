@@ -126,14 +126,33 @@ export default function DotMatrixBanner({
       render();
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        mouseRef.current.x = e.touches[0].clientX - rect.left;
+        mouseRef.current.y = e.touches[0].clientY - rect.top;
+        render();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      mouseRef.current.x = -1000;
+      mouseRef.current.y = -1000;
+      render();
+    };
+
     window.addEventListener("resize", handleResize);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseleave", handleMouseLeave);
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: true });
+    canvas.addEventListener("touchend", handleTouchEnd);
 
     return () => {
       window.removeEventListener("resize", handleResize);
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseleave", handleMouseLeave);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
       cancelAnimationFrame(animId);
     };
   }, [text]);
@@ -141,12 +160,12 @@ export default function DotMatrixBanner({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full overflow-hidden select-none pointer-events-auto ${className}`}
-      style={{ minHeight: "12vw" }}
+      className={`relative w-full overflow-hidden select-none pointer-events-auto h-[60px] sm:h-[80px] lg:h-[12vw] ${className}`}
+      style={{ minHeight: "55px" }}
     >
       <canvas
         ref={canvasRef}
-        className="w-full h-full block cursor-crosshair"
+        className="w-full h-full block cursor-crosshair touch-none"
       />
     </div>
   );
