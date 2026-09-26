@@ -8,6 +8,7 @@ import ScrollScrambleText from "./ScrollScrambleText";
 import PixelScrollCue from "./PixelScrollCue";
 import GlitchPortrait from "./GlitchPortrait";
 import ScrambleText from "./ScrambleText";
+import ScrollGuidance from "./ScrollGuidance";
 
 export default function CurtisHero() {
   const { soundEnabled, toggleSound, playClick, playHover } = useSound();
@@ -29,6 +30,19 @@ export default function CurtisHero() {
     const interval = setInterval(updateTime, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const [mobileScrollProg, setMobileScrollProg] = useState(0);
+
+  useEffect(() => {
+    if (isDesktop) return;
+    const onScroll = () => {
+      const p = Math.min(1, Math.max(0, window.scrollY / 180));
+      setMobileScrollProg(p);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isDesktop]);
 
   const handleNextSection = () => {
     playClick();
@@ -154,9 +168,9 @@ export default function CurtisHero() {
           <div className="mt-2 mb-2 max-w-xl">
             <ScrollScrambleText
               text="Great products are crafted by discords, late night sessions and millions of Iterations. So : "
-              scrollProgress={isDesktop ? scrollProgress : 1}
-              startThreshold={0.003}
-              endThreshold={0.040}
+              scrollProgress={isDesktop ? scrollProgress : mobileScrollProg}
+              startThreshold={isDesktop ? 0.003 : 0.05}
+              endThreshold={isDesktop ? 0.040 : 0.85}
               prefix=">>"
               className="text-sm sm:text-base md:text-lg font-bold font-mono tracking-tight text-white/90 leading-snug"
             />
@@ -164,9 +178,14 @@ export default function CurtisHero() {
 
           {/* Reference Image 3 & Image 2: Direction of Scroll Cue with Exact Green Pixel Arrow */}
           <div className="mt-2">
-            <PixelScrollCue scrollProgress={isDesktop ? scrollProgress : 1} />
+            <PixelScrollCue scrollProgress={isDesktop ? scrollProgress : mobileScrollProg} />
           </div>
         </div>
+      </div>
+
+      {/* Mobile Scroll Guidance Cue */}
+      <div className="flex lg:hidden justify-center my-3 pointer-events-none">
+        <ScrollGuidance label="KEEP SCROLLING" theme="dark" />
       </div>
 
       {/* Bottom Horizontal Cue Banner */}

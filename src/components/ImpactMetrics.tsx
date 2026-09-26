@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { TrendingUp, Building2, HeartHandshake, Rocket } from "lucide-react";
 import { useSound } from "./SoundManager";
@@ -10,6 +10,32 @@ import ScrambleText from "./ScrambleText";
 export default function ImpactMetrics() {
   const { playHover } = useSound();
   const { scrollProgress, isDesktop } = useHorizontalScroll();
+  const [mobileRevealed, setMobileRevealed] = useState<boolean[]>(() => new Array(6).fill(false));
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    if (isDesktop) return;
+
+    const onScroll = () => {
+      const vh = window.innerHeight;
+      cardRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top < vh * 0.90) {
+          setMobileRevealed((prev) => {
+            if (prev[i]) return prev;
+            const next = [...prev];
+            next[i] = true;
+            return next;
+          });
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isDesktop]);
 
   const fortune500 = [
     {
@@ -108,11 +134,14 @@ export default function ImpactMetrics() {
               <span>3 TOP 10 FORTUNE 500 ENTERPRISES</span>
             </div>
 
-            {fortune500.map((f500) => {
-              const isRevealed = !isDesktop || scrollProgress >= f500.threshold || scrollProgress >= 0.74;
+            {fortune500.map((f500, idx) => {
+              const isRevealed = isDesktop
+                ? (scrollProgress >= f500.threshold || scrollProgress >= 0.74)
+                : mobileRevealed[idx];
               return (
                 <div
                   key={f500.name}
+                  ref={(el) => { cardRefs.current[idx] = el; }}
                   onMouseEnter={playHover}
                   style={{
                     transform: isRevealed ? "translate3d(0, 0, 0)" : "translate3d(0, 24px, 0)",
@@ -153,11 +182,15 @@ export default function ImpactMetrics() {
             </div>
 
             <div className="flex-1 flex flex-col justify-between gap-2 sm:gap-2.5">
-              {ngos.map((ngo) => {
-                const isRevealed = !isDesktop || scrollProgress >= ngo.threshold || scrollProgress >= 0.74;
+              {ngos.map((ngo, idx) => {
+                const cardIdx = 3 + idx;
+                const isRevealed = isDesktop
+                  ? (scrollProgress >= ngo.threshold || scrollProgress >= 0.74)
+                  : mobileRevealed[cardIdx];
                 return (
                   <div
                     key={ngo.name}
+                    ref={(el) => { cardRefs.current[cardIdx] = el; }}
                     onMouseEnter={playHover}
                     style={{
                       transform: isRevealed ? "translate3d(0, 0, 0)" : "translate3d(0, 24px, 0)",
@@ -194,9 +227,12 @@ export default function ImpactMetrics() {
             </div>
 
             {(() => {
-              const isRevealed = !isDesktop || scrollProgress >= startup.threshold || scrollProgress >= 0.74;
+              const isRevealed = isDesktop
+                ? (scrollProgress >= startup.threshold || scrollProgress >= 0.74)
+                : mobileRevealed[5];
               return (
                 <div
+                  ref={(el) => { cardRefs.current[5] = el; }}
                   onMouseEnter={playHover}
                   style={{
                     transform: isRevealed ? "translate3d(0, 0, 0)" : "translate3d(0, 24px, 0)",

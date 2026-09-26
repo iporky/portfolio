@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ExternalLink, Smartphone, Globe, Sparkles, HeartHandshake, BookOpen } from "lucide-react";
 import { useSound } from "./SoundManager";
@@ -10,6 +10,32 @@ import ScrambleText from "./ScrambleText";
 export default function SelectedProducts() {
   const { playClick, playHover } = useSound();
   const { scrollProgress, isDesktop } = useHorizontalScroll();
+  const [mobileRevealed, setMobileRevealed] = useState<boolean[]>(() => new Array(4).fill(false));
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    if (isDesktop) return;
+
+    const onScroll = () => {
+      const vh = window.innerHeight;
+      cardRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top < vh * 0.90) {
+          setMobileRevealed((prev) => {
+            if (prev[i]) return prev;
+            const next = [...prev];
+            next[i] = true;
+            return next;
+          });
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isDesktop]);
 
   const products = [
     {
@@ -98,12 +124,15 @@ export default function SelectedProducts() {
 
         {/* 4 Cards Grid - Staggered Appearance Tied to Scroll on Desktop, Immediately Visible on Mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {products.map((prod) => {
+          {products.map((prod, idx) => {
             const Icon = prod.icon;
-            const isRevealed = !isDesktop || scrollProgress >= prod.threshold || scrollProgress >= 0.58;
+            const isRevealed = isDesktop
+              ? (scrollProgress >= prod.threshold || scrollProgress >= 0.58)
+              : mobileRevealed[idx];
             return (
               <div
                 key={prod.title}
+                ref={(el) => { cardRefs.current[idx] = el; }}
                 onMouseEnter={playHover}
                 style={{
                   transform: isRevealed ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)",

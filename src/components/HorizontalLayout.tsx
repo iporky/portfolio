@@ -10,7 +10,22 @@ interface HorizontalScrollContextType {
   scrollToProgress: (prog: number) => void;
   isLoaded: boolean;
   isDesktop: boolean;
+  preloadedFrames: HTMLImageElement[];
 }
+
+const TOTAL_FRAMES = 181;
+const CRITICAL_IMAGES = [
+  "/portrait.webp",
+  "/portrait_tuxedo_top.webp",
+  "/projects/konnect_app_banner.png",
+  "/projects/konnect_logo.png",
+  "/projects/treksforall.webp",
+  "/projects/magnum_logo.png",
+  "/companies/ge_aerospace.svg",
+  "/companies/verizon.svg",
+  "/companies/247ai.svg",
+];
+const TOTAL_ASSETS = TOTAL_FRAMES + CRITICAL_IMAGES.length;
 
 const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
   scrollProgress: 0,
@@ -19,6 +34,7 @@ const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
   scrollToProgress: () => {},
   isLoaded: false,
   isDesktop: true,
+  preloadedFrames: [],
 });
 
 export const useHorizontalScroll = () => useContext(HorizontalScrollContext);
@@ -35,6 +51,8 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
   // Preloader / Boot Barrier State
   const [isLoaded, setIsLoaded] = useState(false);
   const [bootPercent, setBootPercent] = useState(0);
+  const [bootStatus, setBootStatus] = useState("INITIALIZING BUFFER...");
+  const [preloadedFrames, setPreloadedFrames] = useState<HTMLImageElement[]>([]);
 
   const targetProgressRef = useRef(0);
   const currentProgressRef = useRef(0);
@@ -49,49 +67,119 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
     return () => window.removeEventListener("resize", checkViewport);
   }, []);
 
-  // 1. Initial Mount: Block scroll restoration & run Boot Barrier
+  // 1. Initial Mount: Real asset preloading (all 181 frames + critical images)
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.history.scrollRestoration = "manual";
       window.scrollTo(0, 0);
     }
 
-    // Simulate cyber boot sequence & asset preloading (1000ms duration)
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 15) + 10;
-      if (progress >= 100) {
-        progress = 100;
-        setBootPercent(100);
-        clearInterval(interval);
-        setTimeout(() => {
+    let isCancelled = false;
+    let loadedCount = 0;
+    const frameImages: HTMLImageElement[] = new Array(TOTAL_FRAMES);
+
+    const onAssetLoaded = (label: string) => {
+      if (isCancelled) return;
+      loadedCount++;
+      const pct = Math.min(100, Math.round((loadedCount / TOTAL_ASSETS) * 100));
+      setBootPercent(pct);
+      setBootStatus(`BUFFERING ASSETS (${loadedCount}/${TOTAL_ASSETS})`);
+    };
+
+    // Load a single frame
+    const loadFrame = (idx: number): Promise<HTMLImageElement> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const frameNum = String(idx + 1).padStart(3, "0");
+        img.src = `/frames/frame-${frameNum}.webp`;
+        const finish = () => {
+          frameImages[idx] = img;
+          onAssetLoaded(`frame-${frameNum}`);
+          resolve(img);
+        };
+        img.onload = finish;
+        img.onerror = finish;
+      });
+    };
+
+    // Load a general image asset
+    const loadImg = (url: string): Promise<HTMLImageElement> => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = url;
+        const finish = () => {
+          onAssetLoaded(url);
+          resolve(img);
+        };
+        img.onload = finish;
+        img.onerror = finish;
+      });
+    };
+
+    // Concurrent worker pool to load all 181 frames smoothly without choking socket connections
+    const concurrency = 16;
+    let frameCursor = 0;
+
+    const worker = async () => {
+      while (frameCursor < TOTAL_FRAMES) {
+        const idx = frameCursor++;
+        await loadFrame(idx);
+      }
+    };
+
+    const workerPromises = Array.from({ length: concurrency }, () => worker());
+    const assetPromises = CRITICAL_IMAGES.map((url) => loadImg(url));
+
+    Promise.all([...workerPromises, ...assetPromises]).then(() => {
+      if (isCancelled) return;
+      setPreloadedFrames(frameImages);
+      setBootPercent(100);
+      setBootStatus("ALL 181 FRAMES & ASSETS READY");
+      setTimeout(() => {
+        if (!isCancelled) {
           setIsLoaded(true);
           if (typeof window !== "undefined") {
             window.scrollTo(0, 0);
           }
-        }, 300);
-      } else {
-        setBootPercent(progress);
-      }
-    }, 70);
+        }
+      }, 350);
+    });
 
-    return () => clearInterval(interval);
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
-  // 2. Prevent premature scrolling while loading
+  // 2. Strict scroll lock while loading: Prevent wheel, touch, keys, and overflow
   useEffect(() => {
     if (!isLoaded) {
       const preventDefault = (e: Event) => {
         e.preventDefault();
       };
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (["Space", "ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"].includes(e.code)) {
+          e.preventDefault();
+        }
+      };
+
+      if (typeof document !== "undefined") {
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+      }
 
       window.addEventListener("wheel", preventDefault, { passive: false });
       window.addEventListener("touchmove", preventDefault, { passive: false });
+      window.addEventListener("keydown", onKeyDown, { passive: false });
       window.scrollTo(0, 0);
 
       return () => {
+        if (typeof document !== "undefined") {
+          document.documentElement.style.overflow = "";
+          document.body.style.overflow = "";
+        }
         window.removeEventListener("wheel", preventDefault);
         window.removeEventListener("touchmove", preventDefault);
+        window.removeEventListener("keydown", onKeyDown);
       };
     }
   }, [isLoaded]);
@@ -246,6 +334,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
         scrollToProgress,
         isLoaded,
         isDesktop,
+        preloadedFrames,
       }}
     >
       {/* Outer scroll container: 1200vh on Desktop for horizontal translation; auto on Mobile/Tablet */}
@@ -329,7 +418,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
           </div>
 
           <div className="flex items-center justify-between w-full font-mono text-[11px] text-white/50">
-            <span>CALIBRATING TIMELINES...</span>
+            <span className="uppercase tracking-wider">{bootStatus}</span>
             <span className="text-[#9df133] font-bold">{bootPercent}%</span>
           </div>
         </div>

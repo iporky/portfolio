@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { 
   Award, 
@@ -52,6 +52,25 @@ export default function AboutSection() {
     ? 2 * effectiveDoorProg * effectiveDoorProg
     : 1 - Math.pow(-2 * effectiveDoorProg + 2, 2) / 2;
   const translateYPercent = (1 - doorEase) * 100;
+
+  const [mobileInView, setMobileInView] = useState(false);
+  const aboutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isDesktop) return;
+
+    const onScroll = () => {
+      if (!aboutRef.current) return;
+      const rect = aboutRef.current.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.88) {
+        setMobileInView(true);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isDesktop]);
 
   const handleGarageToggle = () => {
     playClick();
@@ -106,7 +125,15 @@ export default function AboutSection() {
       </div>
 
       {/* Base Deck: Tuxedo Portrait, Ethos, Contact Commands */}
-      <div className="max-w-7xl mx-auto w-full relative z-10 px-6 sm:px-12 my-auto transition-opacity duration-300">
+      <div
+        ref={aboutRef}
+        style={{
+          opacity: isDesktop || mobileInView ? 1 : 0,
+          transform: isDesktop || mobileInView ? "translate3d(0, 0, 0)" : "translate3d(0, 32px, 0)",
+          transition: "opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className="max-w-7xl mx-auto w-full relative z-10 px-6 sm:px-12 my-auto"
+      >
         {/* Header (No text gradients, solid neon green) */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 sm:mb-5 gap-3 sm:gap-4">
           <div>

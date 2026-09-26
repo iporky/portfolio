@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useSound } from "./SoundManager";
 import { useHorizontalScroll } from "./HorizontalLayout";
+import ScrollGuidance from "./ScrollGuidance";
 
 interface BentoTilesSectionProps {
   scrollProgress?: number;
@@ -95,13 +96,48 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
   // Track hover on any box for the pitch black card inversion
   const [hoveredBox, setHoveredBox] = useState<string | null>(null);
 
-  // Screen 1 progress mapped from pinned timeline [0.33, 0.39]:
-  // Completes early by scrollProgress = 0.345, leaving a comfortable cushion before transition to Screen 2 at 0.39!
+  // Screen 1 progress mapped from pinned timeline [0.33, 0.39] on desktop
   const s1Progress = Math.min(1, Math.max(0, (scrollProgress - 0.32) / 0.05));
 
-  // Screen 2 progress mapped from pinned timeline [0.42, 0.48]:
-  // Completes early by scrollProgress = 0.435, leaving a comfortable cushion before transition to Products at 0.48!
+  // Screen 2 progress mapped from pinned timeline [0.42, 0.48] on desktop
   const s2Progress = Math.min(1, Math.max(0, (scrollProgress - 0.41) / 0.05));
+
+  // Mobile scroll progress tracking so transitions occur dynamically on scroll
+  const [mobileS1Progress, setMobileS1Progress] = useState(0);
+  const [mobileS2Progress, setMobileS2Progress] = useState(0);
+  const screen1Ref = useRef<HTMLDivElement>(null);
+  const screen2Ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isDesktop) return;
+
+    const onScroll = () => {
+      const vh = window.innerHeight;
+
+      if (screen1Ref.current) {
+        const rect1 = screen1Ref.current.getBoundingClientRect();
+        const enterStart = vh * 0.95;
+        const enterEnd = vh * 0.20;
+        const p1 = Math.min(1, Math.max(0, (enterStart - rect1.top) / (enterStart - enterEnd)));
+        setMobileS1Progress(p1);
+      }
+
+      if (screen2Ref.current) {
+        const rect2 = screen2Ref.current.getBoundingClientRect();
+        const enterStart = vh * 0.95;
+        const enterEnd = vh * 0.20;
+        const p2 = Math.min(1, Math.max(0, (enterStart - rect2.top) / (enterStart - enterEnd)));
+        setMobileS2Progress(p2);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isDesktop]);
+
+  const effectiveS1Progress = isDesktop ? s1Progress : mobileS1Progress;
+  const effectiveS2Progress = isDesktop ? s2Progress : mobileS2Progress;
 
   // SCREEN 1 TILES - Exact 5-Column Staggered Layout from CV (Zero Photoshop / Illustrator!)
   const screen1Tiles = [
@@ -300,12 +336,12 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
   const renderCurtisTile = (tile: any, screenProgress: number, isMobile = false) => {
     const isHovered = hoveredBox === tile.id;
 
-    // Fast-loading aperture animation:
-    // With tile.delay in [0.0, 0.30] and duration 0.15, all tiles reach 1.0 by screenProgress = 0.45!
-    const tProgress = isMobile ? 1 : Math.min(1, Math.max(0, (screenProgress - tile.delay) / 0.15));
-    const oh = isMobile ? 1 : Math.min(1, Math.max(0, tProgress / 0.45));
-    const ow = isMobile ? 1 : Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
-    const odoProg = isMobile ? 1 : Math.min(1, Math.max(0, (tProgress - 0.30) / 0.70));
+    // Fast-loading aperture animation that triggers smoothly on both mobile & desktop
+    const delay = isMobile ? tile.delay * 0.4 : tile.delay;
+    const tProgress = Math.min(1, Math.max(0, (screenProgress - delay) / 0.22));
+    const oh = Math.min(1, Math.max(0, tProgress / 0.45));
+    const ow = Math.min(1, Math.max(0, (tProgress - 0.20) / 0.80));
+    const odoProg = Math.min(1, Math.max(0, (tProgress - 0.20) / 0.80));
 
     // Custom CSS grid position classes for desktop 5-column alternating chessboard
     const colClasses: Record<number, string> = {
@@ -342,15 +378,13 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         onMouseLeave={() => setHoveredBox(null)}
         className={
           isMobile
-            ? "stat-box group relative w-full h-[150px] min-h-[140px] select-none cursor-pointer transition-all duration-200"
+            ? "stat-box group relative w-full h-[142px] min-h-[135px] select-none cursor-pointer transition-all duration-200"
             : `stat-box group absolute w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] select-none cursor-pointer transition-all duration-200 ${desktopPos}`
         }
         style={{
-          // Curtis exact aperture reveal formula (100% open by progress = 0.45):
-          clipPath: isMobile
-            ? undefined
-            : `inset(calc((1 - ${oh}) * 50%) calc((1 - ${ow}) * (100% - 1px)) calc((1 - ${oh}) * 50%) 0)`,
-          willChange: isMobile ? "transform" : "clip-path, transform",
+          // Curtis exact aperture reveal formula (unfolds clip-path as user scrolls):
+          clipPath: `inset(calc((1 - ${oh}) * 50%) calc((1 - ${ow}) * (100% - 1px)) calc((1 - ${oh}) * 50%) 0)`,
+          willChange: "clip-path, transform",
         }}
       >
         {/* Outer Notch Border Stroke: Olive green by default, Pitch Black on Hover */}
@@ -365,7 +399,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         >
           {/* Inner Notch Box Fill (inset 2px): Olive green by default, Pure Black on Hover */}
           <div
-            className={`absolute inset-[2px] p-3.5 flex flex-col justify-between transition-colors duration-200 ${
+            className={`absolute inset-[2px] ${isMobile ? "p-2.5 sm:p-3" : "p-3.5"} flex flex-col justify-between transition-colors duration-200 ${
               isHovered
                 ? "bg-[#0a0a0a] text-white shadow-2xl"
                 : "bg-[#84c72f] text-[#0a0a0a] group-hover:bg-[#0a0a0a] group-hover:text-white group-hover:shadow-2xl"
@@ -388,7 +422,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
             {/* Top Right Label */}
             <div className="flex items-start justify-end w-full">
               <span
-                className={`font-mono text-[10px] sm:text-[11px] font-black tracking-widest uppercase text-right leading-tight transition-colors duration-200 ${
+                className={`font-mono ${isMobile ? "text-[8.5px] sm:text-[10px]" : "text-[10px] sm:text-[11px]"} font-black tracking-widest uppercase text-right leading-tight transition-colors duration-200 ${
                   isHovered ? "text-white/95" : "text-[#0a0a0a]/90 group-hover:text-white/95"
                 }`}
               >
@@ -402,7 +436,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
               {tile.type === "stat" && (
                 <div className="flex flex-col">
                   <div
-                    className={`text-4xl sm:text-5xl lg:text-[3.5rem] font-bold font-mono tracking-tighter leading-none transition-colors duration-200 ${
+                    className={`${isMobile ? "text-2xl sm:text-4xl" : "text-4xl sm:text-5xl lg:text-[3.5rem]"} font-bold font-mono tracking-tighter leading-none transition-colors duration-200 ${
                       isHovered ? "text-white" : "text-[#0a0a0a] group-hover:text-white"
                     }`}
                   >
@@ -410,7 +444,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
                   </div>
                   {tile.sub && (
                     <span
-                      className={`font-mono text-[9px] sm:text-[10px] uppercase tracking-wider mt-1 transition-colors duration-200 font-bold ${
+                      className={`font-mono ${isMobile ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]"} uppercase tracking-wider mt-0.5 sm:mt-1 transition-colors duration-200 font-bold ${
                         isHovered ? "text-white/70" : "text-[#0a0a0a]/70 group-hover:text-white/70"
                       }`}
                     >
@@ -423,23 +457,23 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
               {/* Claude Code Tool Tile with Authentic Vector Starburst */}
               {tile.type === "tool-claude" && (
                 <div className="flex items-end justify-between w-full">
-                  <div className="flex flex-col pr-2">
+                  <div className="flex flex-col pr-1 sm:pr-2">
                     <span
-                      className={`font-mono text-[9px] sm:text-[10px] uppercase tracking-wider font-black mb-0.5 ${
+                      className={`font-mono ${isMobile ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]"} uppercase tracking-wider font-black mb-0.5 ${
                         isHovered ? "text-[#9df133]" : "text-[#0a0a0a] group-hover:text-[#9df133]"
                       }`}
                     >
                       {tile.sub}
                     </span>
                     <p
-                      className={`text-[9.5px] sm:text-[10px] leading-tight font-sans line-clamp-2 ${
+                      className={`text-[8.5px] sm:text-[9.5px] leading-tight font-sans line-clamp-2 ${
                         isHovered ? "text-white/80" : "text-[#0a0a0a]/80 group-hover:text-white/80"
                       }`}
                     >
                       {tile.desc}
                     </p>
                   </div>
-                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0 flex items-center justify-center">
+                  <div className={`relative ${isMobile ? "w-9 h-9 sm:w-12 sm:h-12" : "w-12 h-12 sm:w-14 sm:h-14"} shrink-0 flex items-center justify-center`}>
                     <Image
                       src={tile.defaultSvg}
                       alt={tile.label}
@@ -465,9 +499,9 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
               {/* Tech Cards (Node.js, Docker, RAG, Python, Kafka, React Native) */}
               {(tile.type === "tech" || tile.type === "tech-featured") && (
                 <div className="flex flex-col w-full pr-1">
-                  <div className="flex items-baseline justify-between mb-1">
+                  <div className="flex items-baseline justify-between mb-0.5 sm:mb-1">
                     <span
-                      className={`text-2xl sm:text-3xl font-black font-mono tracking-tight leading-none ${
+                      className={`${isMobile ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"} font-black font-mono tracking-tight leading-none ${
                         isHovered ? "text-white" : "text-[#0a0a0a] group-hover:text-white"
                       }`}
                     >
@@ -475,7 +509,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
                     </span>
                     {tile.badge && (
                       <span
-                        className={`font-mono text-[9px] uppercase px-1.5 py-0.5 rounded font-black ${
+                        className={`font-mono ${isMobile ? "text-[8px]" : "text-[9px]"} uppercase px-1 py-0.5 rounded font-black ${
                           isHovered
                             ? "bg-[#9df133] text-[#050505]"
                             : "bg-[#0a0a0a] text-[#9df133] group-hover:bg-[#9df133] group-hover:text-[#050505]"
@@ -486,7 +520,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
                     )}
                   </div>
                   <p
-                    className={`text-[9.5px] sm:text-[10px] leading-tight font-sans line-clamp-2 transition-colors duration-200 ${
+                    className={`text-[8.5px] sm:text-[9.5px] leading-tight font-sans line-clamp-2 transition-colors duration-200 ${
                       isHovered ? "text-white/85" : "text-[#0a0a0a]/85 group-hover:text-white/85"
                     }`}
                   >
@@ -524,7 +558,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
       {/* ========================================================================= */}
       {/* SCREEN 1: Authentic Curtis 5-Column Staggered Chessboard                  */}
       {/* ========================================================================= */}
-      <div className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#599f00]/30 z-10">
+      <div ref={screen1Ref} className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#599f00]/30 z-10">
         {/* Top Header Bar (Matching Curtis telemetry) */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
           <div className="flex items-center gap-2">
@@ -548,14 +582,14 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
 
         {/* Screen 1 Canvas Area for Desktop (5 Alternating Staggered Columns) */}
         <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
-          {screen1Tiles.map((tile) => renderCurtisTile(tile, s1Progress, false))}
+          {screen1Tiles.map((tile) => renderCurtisTile(tile, effectiveS1Progress, false))}
 
           {/* Freestanding Monochrome Pixel Art Pyramid in Column 1, Row 3 */}
           <div
             className="absolute lg:left-[2.5%] lg:top-[calc(1.75rem+50vh)] w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] flex flex-col items-center justify-center pointer-events-none transition-transform duration-300"
             style={{
-              transform: `scale(${Math.min(1, Math.max(0, s1Progress * 1.8))})`,
-              opacity: Math.min(1, Math.max(0, s1Progress * 2.2)),
+              transform: `scale(${Math.min(1, Math.max(0, effectiveS1Progress * 1.8))})`,
+              opacity: Math.min(1, Math.max(0, effectiveS1Progress * 2.2)),
             }}
           >
             <CurtisPixelPyramid />
@@ -566,17 +600,29 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         </div>
 
         {/* Screen 1 Grid Area for Mobile & Tablet (< 1024px) */}
-        <div className="relative w-full block lg:hidden my-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-            {screen1Tiles.map((tile) => renderCurtisTile(tile, s1Progress, true))}
+        <div className="relative w-full block lg:hidden my-4 sm:my-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+            {screen1Tiles.map((tile) => renderCurtisTile(tile, effectiveS1Progress, true))}
+
+            {/* Freestanding Pixel Pyramid inside 2-Column Mobile Grid in Row 4, Col 2 (Matching Curtis Reference) */}
+            <div
+              className="stat-box relative w-full h-[142px] min-h-[135px] flex flex-col items-center justify-center p-2.5 sm:p-3 select-none"
+              style={{
+                transform: `scale(${Math.min(1, Math.max(0.75, effectiveS1Progress * 1.2))})`,
+                opacity: Math.min(1, Math.max(0.4, effectiveS1Progress * 1.5)),
+                transition: "transform 0.3s ease-out, opacity 0.3s ease-out",
+              }}
+            >
+              <CurtisPixelPyramid />
+              <span className="font-mono text-[8.5px] sm:text-[9px] font-black text-[#0a0a0a] mt-2 uppercase tracking-widest text-center">
+                // AGENTIC AI CORE
+              </span>
+            </div>
           </div>
 
-          {/* Pyramid on Mobile/Tablet */}
-          <div className="flex flex-col items-center justify-center p-4 my-4">
-            <CurtisPixelPyramid />
-            <span className="font-mono text-[9px] font-black text-[#0a0a0a] mt-2 uppercase tracking-widest">
-              // AGENTIC AI CORE
-            </span>
+          {/* Small Scroll Guidance on Mobile */}
+          <div className="flex justify-center mt-5 mb-1 pointer-events-none">
+            <ScrollGuidance label="KEEP SCROLLING" theme="light" />
           </div>
         </div>
 
@@ -596,7 +642,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
       {/* ========================================================================= */}
       {/* SCREEN 2: Continuous Second Screen: Advanced AI, RAG, Kafka, K8s           */}
       {/* ========================================================================= */}
-      <div className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 z-10 mt-8 lg:mt-0">
+      <div ref={screen2Ref} className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 z-10 mt-8 lg:mt-0">
         {/* Top Header Bar */}
         <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
           <div className="flex items-center gap-2">
@@ -619,13 +665,18 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
 
         {/* Screen 2 Canvas Area for Desktop */}
         <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
-          {screen2Tiles.map((tile) => renderCurtisTile(tile, s2Progress, false))}
+          {screen2Tiles.map((tile) => renderCurtisTile(tile, effectiveS2Progress, false))}
         </div>
 
         {/* Screen 2 Grid Area for Mobile & Tablet (< 1024px) */}
-        <div className="relative w-full block lg:hidden my-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-            {screen2Tiles.map((tile) => renderCurtisTile(tile, s2Progress, true))}
+        <div className="relative w-full block lg:hidden my-4 sm:my-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+            {screen2Tiles.map((tile) => renderCurtisTile(tile, effectiveS2Progress, true))}
+          </div>
+
+          {/* Small Scroll Guidance on Mobile */}
+          <div className="flex justify-center mt-5 mb-1 pointer-events-none">
+            <ScrollGuidance label="KEEP SCROLLING FOR PRODUCTS" theme="light" />
           </div>
         </div>
 
