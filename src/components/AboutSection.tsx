@@ -401,6 +401,15 @@ export default function AboutSection() {
                 <span className="text-base group-hover:translate-x-1 group-hover:-translate-y-0.5 transition-transform font-bold">↗</span>
               </a>
               <a
+                href="https://www.instagram.com/nanashi.la_familia/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#0a0a0a] hover:underline flex items-center justify-between py-1.5 border-b border-[#0a0a0a]/15 hover:border-[#0a0a0a]/40 transition-all group"
+              >
+                <span className="tracking-wider font-mono">INSTAGRAM</span>
+                <span className="text-base group-hover:translate-x-1 group-hover:-translate-y-0.5 transition-transform font-bold">↗</span>
+              </a>
+              <a
                 href="https://github.com/iporky"
                 target="_blank"
                 rel="noopener noreferrer"

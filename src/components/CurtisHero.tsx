@@ -12,7 +12,7 @@ import ScrollGuidance from "./ScrollGuidance";
 
 export default function CurtisHero() {
   const { soundEnabled, toggleSound, playClick, playHover } = useSound();
-  const { scrollProgress, scrollToProgress, isDesktop } = useHorizontalScroll();
+  const { scrollProgress, scrollToProgress, isDesktop, setIsMenuOpen } = useHorizontalScroll();
   const [timeStr, setTimeStr] = useState<string>("5:30 PM");
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function CurtisHero() {
   };
 
   return (
-    <section className="relative w-full lg:w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between pt-6 pb-6 px-4 sm:px-8 lg:px-12 selection:bg-[#9df133] selection:text-black">
+    <section className="relative w-full lg:w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between pt-4 sm:pt-6 pb-3 sm:pb-6 px-4 sm:px-8 lg:px-12 selection:bg-[#9df133] selection:text-black">
       {/* 6-Column Vertical Guidelines (Curtis Style) */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -109,7 +109,10 @@ export default function CurtisHero() {
 
         {/* Curtis Polygon Menu Button */}
         <button
-          onClick={handleNextSection}
+          onClick={() => {
+            playClick();
+            setIsMenuOpen(true);
+          }}
           onMouseEnter={playHover}
           className="group relative flex items-center justify-center h-8 px-4 curtis-notch bg-[#9df133]/10 border border-[#9df133]/30 hover:bg-[#9df133] hover:text-black transition-all cursor-pointer"
         >
@@ -118,7 +121,7 @@ export default function CurtisHero() {
           <span className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b border-l border-[#9df133]" />
           <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b border-r border-[#9df133]" />
           <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#9df133] group-hover:text-black">
-            {isDesktop ? "EXPLORE →" : "EXPLORE ↓"}
+            MENU
           </span>
         </button>
       </header>
@@ -184,7 +187,7 @@ export default function CurtisHero() {
       </div>
 
       {/* Mobile Scroll Guidance Cue */}
-      <div className="flex lg:hidden justify-center my-3 pointer-events-none">
+      <div className="flex lg:hidden justify-center mt-2 mb-1 pointer-events-none">
         <ScrollGuidance label="KEEP SCROLLING" theme="dark" />
       </div>
 

@@ -70,40 +70,30 @@ export default function ScrollyHero() {
     ctx.fillStyle = "#050505";
     ctx.fillRect(0, 0, canvasW, canvasH);
 
-    const imgRatio = img.naturalWidth / img.naturalHeight; // 1280 / 720
-    const canvasRatio = canvasW / canvasH;
-
-    let drawW: number;
-    let drawH: number;
-    let drawX: number;
-    let drawY: number;
-
-    if (canvasRatio > imgRatio) {
-      drawH = canvasH;
-      drawW = canvasH * imgRatio;
-      drawX = (canvasW - drawW) / 2;
-      drawY = 0;
-    } else {
-      drawW = canvasW;
-      drawH = canvasW / imgRatio;
-      drawX = 0;
-      drawY = (canvasH - drawH) / 2;
-    }
+    // Full-bleed cover for both mobile portrait and desktop landscape (zero letterbox black bars!)
+    const scale = Math.max(canvasW / img.naturalWidth, canvasH / img.naturalHeight);
+    const drawW = img.naturalWidth * scale;
+    const drawH = img.naturalHeight * scale;
+    // On portrait mobile screens, focus slightly on the subject (x ~ 52%, y ~ 50%)
+    const xFocal = canvasH > canvasW ? 0.52 : 0.5;
+    const drawX = (canvasW - drawW) * xFocal;
+    const drawY = (canvasH - drawH) * 0.5;
 
     ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
-    // Vignette gradient
+    // Subtle edge vignette (never obscuring the video artwork on mobile)
+    const radius = Math.hypot(canvasW, canvasH) * 0.55;
     const gradient = ctx.createRadialGradient(
       canvasW / 2,
       canvasH / 2,
-      Math.min(canvasW, canvasH) * 0.4,
+      radius * 0.45,
       canvasW / 2,
       canvasH / 2,
-      Math.max(canvasW, canvasH) * 0.72
+      radius
     );
     gradient.addColorStop(0, "rgba(5, 5, 5, 0)");
-    gradient.addColorStop(0.8, "rgba(5, 5, 5, 0.45)");
-    gradient.addColorStop(1, "rgba(5, 5, 5, 0.98)");
+    gradient.addColorStop(0.75, "rgba(5, 5, 5, 0.15)");
+    gradient.addColorStop(1, "rgba(5, 5, 5, 0.6)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvasW, canvasH);
@@ -203,18 +193,18 @@ export default function ScrollyHero() {
     <section
       id="scrolly-greeting"
       ref={sectionRef}
-      className={`relative w-full shrink-0 bg-[#050505] selection:bg-[#9df133] selection:text-black flex flex-col items-center justify-center ${
+      className={`relative w-full shrink-0 bg-[#050505] selection:bg-[#9df133] selection:text-black ${
         isDesktop
-          ? "lg:w-screen lg:h-screen overflow-hidden border-x border-white/[0.06]"
-          : "h-[260vh] border-t border-white/[0.06]"
+          ? "lg:w-screen lg:h-screen overflow-hidden border-x border-white/[0.06] flex flex-col items-center justify-center"
+          : "h-[180vh]"
       }`}
     >
-      {/* Canvas Engine Container: Sticky fullscreen viewport on mobile; Absolute fullscreen on desktop */}
+      {/* Canvas Engine Container: Sticky fullscreen viewport on mobile starting right at top:0; Absolute fullscreen on desktop */}
       <div
         className={
           isDesktop
             ? "absolute inset-0 w-full h-full block z-0"
-            : "sticky top-0 left-0 w-full h-screen overflow-hidden flex items-center justify-center z-0"
+            : "sticky top-0 left-0 w-full h-[100dvh] overflow-hidden z-0"
         }
       >
         <canvas
@@ -222,18 +212,18 @@ export default function ScrollyHero() {
           className="w-full h-full block"
         />
 
-        {/* Seamless Edge Feathering Overlays */}
-        <div className="pointer-events-none absolute inset-0 z-10 bg-radial-[circle_at_center,transparent_45%,#050505_96%]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-32 bg-gradient-to-b from-[#050505] via-[#050505]/60 to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[#050505] via-[#050505]/80 to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 sm:w-28 bg-gradient-to-r from-[#050505] via-[#050505]/60 to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 sm:w-28 bg-gradient-to-l from-[#050505] via-[#050505]/60 to-transparent z-10" />
+        {/* Seamless Edge Feathering Overlays (Desktop radial vignette; subtle fades on mobile) */}
+        <div className="pointer-events-none absolute inset-0 z-10 bg-radial-[circle_at_center,transparent_45%,#050505_96%] hidden lg:block" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 sm:h-16 lg:h-32 bg-gradient-to-b from-[#050505] via-[#050505]/30 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 sm:h-20 lg:h-36 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-20 lg:w-28 bg-gradient-to-r from-[#050505] via-[#050505]/50 to-transparent z-10 hidden sm:block" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-20 lg:w-28 bg-gradient-to-l from-[#050505] via-[#050505]/50 to-transparent z-10 hidden sm:block" />
 
         {/* Scanlines */}
         <div className="pointer-events-none absolute inset-0 z-10 opacity-15 scanline" />
 
         {/* Subtle Bouncing Scroll Guidance Indicator */}
-        <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="absolute bottom-5 sm:bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <ScrollGuidance label="KEEP SCROLLING" theme="dark" />
         </div>
       </div>

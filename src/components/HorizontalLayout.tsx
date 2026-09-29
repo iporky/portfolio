@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import PixelTransition from "./PixelTransition";
+import CurtisMenu from "./CurtisMenu";
 
 interface HorizontalScrollContextType {
   scrollProgress: number; // 0.0 to 1.0
@@ -11,6 +12,8 @@ interface HorizontalScrollContextType {
   isLoaded: boolean;
   isDesktop: boolean;
   preloadedFrames: HTMLImageElement[];
+  isMenuOpen: boolean;
+  setIsMenuOpen: (open: boolean) => void;
 }
 
 const TOTAL_FRAMES = 181;
@@ -35,6 +38,8 @@ const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
   isLoaded: false,
   isDesktop: true,
   preloadedFrames: [],
+  isMenuOpen: false,
+  setIsMenuOpen: () => {},
 });
 
 export const useHorizontalScroll = () => useContext(HorizontalScrollContext);
@@ -47,6 +52,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
   const [scrollX, setScrollX] = useState(0);
   const [totalWidth, setTotalWidth] = useState(0);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Preloader / Boot Barrier State
   const [isLoaded, setIsLoaded] = useState(false);
@@ -335,8 +341,29 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
         isLoaded,
         isDesktop,
         preloadedFrames,
+        isMenuOpen,
+        setIsMenuOpen,
       }}
     >
+      {/* Curtis Fullscreen Navigation & Social Overlay Menu */}
+      <CurtisMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
+      {/* Persistent Floating Top-Right MENU Button (Appears when scrolled past hero) */}
+      {isLoaded && scrollProgress > 0.04 && !isMenuOpen && (
+        <button
+          onClick={() => setIsMenuOpen(true)}
+          className="fixed top-4 right-4 sm:top-6 sm:right-8 z-40 group flex items-center justify-center h-8 px-4 curtis-notch bg-[#050505]/85 backdrop-blur-md border border-[#9df133]/40 hover:bg-[#9df133] hover:text-black transition-all cursor-pointer shadow-[0_0_20px_rgba(0,0,0,0.85)] animate-in fade-in duration-200"
+        >
+          <span className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 border-t border-l border-[#9df133]" />
+          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 border-t border-r border-[#9df133]" />
+          <span className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b border-l border-[#9df133]" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b border-r border-[#9df133]" />
+          <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#9df133] group-hover:text-black">
+            MENU
+          </span>
+        </button>
+      )}
+
       {/* Outer scroll container: 1200vh on Desktop for horizontal translation; auto on Mobile/Tablet */}
       <div
         ref={outerContainerRef}
