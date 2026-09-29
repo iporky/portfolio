@@ -24,7 +24,7 @@ export default function PixelScrollCue({
     >
       <div className="flex flex-col font-mono uppercase tracking-tight font-black leading-none">
         <span className="text-white/90 text-sm sm:text-base tracking-wider">&quot;LETS ITERATE</span>
-        <span className="text-[#b4f000] text-base sm:text-lg tracking-widest font-black">TOGETHER&quot;</span>
+        <span className="text-[#ffff66] text-base sm:text-lg tracking-widest font-black">TOGETHER&quot;</span>
       </div>
 
       {/* Exact Green Pixel Arrow (Reference Image 2) */}
@@ -33,7 +33,7 @@ export default function PixelScrollCue({
         height="36"
         viewBox="0 0 60 50"
         fill="none"
-        className="shrink-0 text-[#b4f000] drop-shadow-[0_0_10px_rgba(180,240,0,0.6)] animate-pulse"
+        className="shrink-0 text-[#ffff66] drop-shadow-[0_0_10px_rgba(255,255,102,0.6)] animate-pulse"
       >
         {/* Row 0 */}
         <rect x="30" y="0" width="8" height="8" fill="currentColor" rx="1" />

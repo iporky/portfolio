@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { motion, type Variants } from "framer-motion";
 import { 
   Award, 
   Mail, 
@@ -18,6 +19,61 @@ import {
 import { useSound } from "./SoundManager";
 import { useHorizontalScroll } from "./HorizontalLayout";
 import DotMatrixBanner from "./DotMatrixBanner";
+import ScrambleText from "./ScrambleText";
+
+const EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+// Deck entrance: the parent staggers its blocks; the portrait unmasks bottom-up
+// behind a neon scan line while the cards rise into place.
+const deckVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
+};
+
+const blockVariants: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EXPO } },
+};
+
+const portraitVariants: Variants = {
+  hidden: { clipPath: "inset(0 0 100% 0)", opacity: 0.6 },
+  visible: { clipPath: "inset(0 0 0% 0)", opacity: 1, transition: { duration: 1.1, ease: EXPO } },
+};
+
+const scanVariants: Variants = {
+  hidden: { top: "0%", opacity: 0 },
+  visible: { top: "100%", opacity: [0, 1, 1, 0], transition: { duration: 1.1, ease: EXPO } },
+};
+
+const hoverLift = { y: -3, transition: { duration: 0.2, ease: "easeOut" as const } };
+
+// Types the text out once `active` flips true; before that (and for the
+// prerendered HTML) the full text is shown, so nothing depends on JS timing.
+function Typewriter({ text, active, speed = 14 }: { text: string; active: boolean; speed?: number }) {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    setCount(0);
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setCount(i);
+      if (i >= text.length) window.clearInterval(id);
+    }, speed);
+    return () => window.clearInterval(id);
+  }, [active, text, speed]);
+
+  const typing = count !== null && count < text.length;
+  const shown = count === null ? text : text.slice(0, count);
+
+  return (
+    <span>
+      {shown}
+      {typing && <span className="inline-block w-1.5 h-3 ml-0.5 bg-[#ffff00] align-middle animate-pulse" />}
+    </span>
+  );
+}
 
 export default function AboutSection() {
   const { playClick, playHover, playSuccess } = useSound();
@@ -44,7 +100,7 @@ export default function AboutSection() {
   };
 
   // Garage Door Smooth Scroll Mechanic (Image 2)
-  // When scroll reaches final pinned stage [0.860 -> 0.940], green card raises smoothly
+  // When scroll reaches final pinned stage [0.860 -> 0.940], yellow card raises smoothly
   const scrollDoorProg = Math.min(1, Math.max(0, (scrollProgress - 0.86) / 0.08));
   const effectiveDoorProg = manualGarageOpen ? 1 : scrollDoorProg;
   // Smooth sine-ease transition
@@ -72,6 +128,11 @@ export default function AboutSection() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isDesktop]);
 
+  // The deck assembles as the track arrives (last stretch of the glide into
+  // this stage on desktop; in view on mobile) and rests well before the door.
+  const deckRevealed = isDesktop ? scrollProgress >= 0.79 : mobileInView;
+  const beamActive = isDesktop ? scrollProgress > 0.74 : mobileInView;
+
   const handleGarageToggle = () => {
     playClick();
     if (isDesktop) {
@@ -83,7 +144,7 @@ export default function AboutSection() {
   };
 
   return (
-    <section id="about" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between selection:bg-[#9df133] selection:text-black pt-6 pb-0">
+    <section id="about" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white overflow-visible lg:overflow-hidden flex flex-col justify-between selection:bg-[#ffff00] selection:text-black pt-6 pb-0">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -94,10 +155,20 @@ export default function AboutSection() {
         <div className="shared-v-line" />
       </div>
 
+      {/* Drifting transmission scan line */}
+      {beamActive && (
+        <div
+          aria-hidden
+          className="beam-y pointer-events-none absolute inset-x-0 top-0 h-px bg-[#ffff00]/25 shadow-[0_0_10px_rgba(255,255,0,0.6)] z-0"
+        />
+      )}
+
       {/* Top Meta Bar matching Curtis Image 2 */}
-      <div className="relative z-30 px-6 sm:px-12 pt-6 pb-2 flex items-center justify-between font-mono text-xs text-white/50 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#9df133] shadow-[0_0_8px_#9df133]" />
+      {/* Stacks on phones: the name row first, the door button on its own row
+          beneath it, both kept clear of the fixed MENU button by the gutter. */}
+      <div className="relative z-30 px-6 sm:px-12 pr-[5.75rem] sm:pr-28 lg:pr-36 pt-6 pb-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-0 font-mono text-xs text-white/50 border-b border-white/[0.06]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="w-2 h-2 rounded-full bg-[#ffff00] shadow-[0_0_8px_#ffff00]" />
           <span className="font-bold text-white tracking-wider">SHIVANG CHAUHAN</span>
           <span className="text-white/40">// 04 LEAD ARCHITECT &amp; SDE III</span>
         </div>
@@ -109,7 +180,7 @@ export default function AboutSection() {
           <button
             onClick={handleGarageToggle}
             onMouseEnter={playHover}
-            className="px-2.5 py-1 rounded curtis-notch font-mono text-[10px] font-bold text-[#0a0a0a] bg-[#9df133] hover:bg-[#b4f000] transition-all flex items-center gap-1"
+            className="shrink-0 whitespace-nowrap px-2.5 py-1 rounded curtis-notch font-mono text-[10px] font-bold text-[#0a0a0a] bg-[#ffff00] hover:bg-[#ffff66] transition-all flex items-center gap-1"
           >
             <ChevronUp className={`w-3 h-3 transition-transform ${effectiveDoorProg > 0.5 ? "rotate-180" : ""}`} />
             <span>{isDesktop ? (effectiveDoorProg > 0.5 ? "CLOSE FOOTER" : "GARAGE DOOR ↓") : "GO TO FOOTER ↓"}</span>
@@ -125,69 +196,77 @@ export default function AboutSection() {
       </div>
 
       {/* Base Deck: Tuxedo Portrait, Ethos, Contact Commands */}
-      <div
+      <motion.div
         ref={aboutRef}
-        style={{
-          opacity: isDesktop || mobileInView ? 1 : 0,
-          transform: isDesktop || mobileInView ? "translate3d(0, 0, 0)" : "translate3d(0, 32px, 0)",
-          transition: "opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
+        initial={false}
+        animate={deckRevealed ? "visible" : "hidden"}
+        variants={deckVariants}
         className="max-w-7xl mx-auto w-full relative z-10 px-6 sm:px-12 my-auto"
       >
-        {/* Header (No text gradients, solid neon green) */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 sm:mb-5 gap-3 sm:gap-4">
+        {/* Header (No text gradients, solid neon yellow) */}
+        <motion.div
+          variants={blockVariants}
+          className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 sm:mb-5 gap-3 sm:gap-4"
+        >
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#ffff00]/10 border border-[#ffff00]/30 text-[#ffff00] font-mono text-xs tracking-wider">
               <Terminal className="w-3.5 h-3.5" />
               <span>// 05 &middot; ABOUT THE DEVELOPER &amp; COMMAND DECK</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
               Ready To Scale? <br />
-              <span className="text-[#9df133]">
-                Initiate Transmission
+              <span className="text-[#ffff00]">
+                <ScrambleText text="Initiate Transmission" speed={28} />
               </span>
             </h2>
           </div>
           <p className="font-mono text-xs sm:text-sm text-white/50 max-w-sm">
             Scroll more or click &ldquo;GARAGE DOOR&rdquo; to open the executive contact deck.
           </p>
-        </div>
+        </motion.div>
 
         {/* 3-Column Command Deck */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (4 cols): Moody Prevalent Dark Tuxedo Portrait (Matching Image 1) */}
-          <div className="lg:col-span-4 relative flex items-start justify-center -mt-2 sm:-mt-4 lg:-mt-6">
-            <div
+          <motion.div
+            variants={blockVariants}
+            className="lg:col-span-4 relative flex items-start justify-center -mt-2 sm:-mt-4 lg:-mt-6"
+          >
+            <motion.div
+              variants={portraitVariants}
               className="relative w-full max-w-[380px] h-[48vh] sm:h-[54vh] xl:h-[58vh] select-none"
               style={{
                 maskImage: "linear-gradient(to bottom, black 70%, rgba(0,0,0,0.4) 88%, transparent 100%)",
                 WebkitMaskImage: "linear-gradient(to bottom, black 70%, rgba(0,0,0,0.4) 88%, transparent 100%)",
               }}
             >
+              {/* The figure sits left of centre in the file (bow tie at 34% of
+                  its width) and the lighting hides the right side, so shift the
+                  image right by the difference to centre the body in its box. */}
               <Image
                 src="/portrait_tuxedo_top.webp"
                 alt="Shivang Chauhan - Executive Architect"
                 fill
-                className="object-contain object-top filter contrast-130 brightness-70"
+                className="object-contain object-top translate-x-[16%] filter contrast-130 brightness-70"
                 sizes="(max-width: 768px) 100vw, 380px"
                 priority
               />
 
               {/* Deep Black Low-Key Wash (Blacker appearance matching user request) */}
               <div className="absolute inset-0 bg-[#050505]/50 pointer-events-none mix-blend-multiply" />
-              <div 
+              <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background: "radial-gradient(ellipse at 50% 32%, transparent 15%, rgba(5,5,5,0.72) 58%, #050505 95%)",
                 }}
               />
-              <div 
+              <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background: "linear-gradient(to bottom, rgba(5,5,5,0.45) 0%, transparent 20%, transparent 55%, rgba(5,5,5,0.92) 88%, #050505 100%)",
                 }}
               />
-              <div 
+              <div
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background: "linear-gradient(to right, #050505 0%, transparent 15%, transparent 85%, #050505 100%)",
@@ -198,45 +277,59 @@ export default function AboutSection() {
               <div
                 className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
                 style={{
-                  backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.45) 0.5px, transparent 0.5px)",
+                  backgroundImage: "radial-gradient(rgba(255,255,255,0.45) 0.5px, transparent 0.5px)",
                   backgroundSize: "2.5px 2.5px",
                 }}
               />
 
-              {/* Dense Horizontal Pixel Scanline Texture */}
+              {/* Dense Horizontal Pixel Scanline Texture, with an occasional CRT flicker */}
               <div
-                className="absolute inset-0 pointer-events-none opacity-35 mix-blend-multiply"
+                className="flicker absolute inset-0 pointer-events-none opacity-35 mix-blend-multiply"
                 style={{
-                  backgroundImage: "repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0px, rgba(0, 0, 0, 0.75) 1px, transparent 1px, transparent 2px)",
+                  backgroundImage: "repeating-linear-gradient(to bottom, rgba(0,0,0,0.75) 0px, rgba(0,0,0,0.75) 1px, transparent 1px, transparent 2px)",
                 }}
               />
-            </div>
-          </div>
+
+              {/* Neon scan line riding the reveal edge */}
+              <motion.div
+                aria-hidden
+                variants={scanVariants}
+                className="absolute inset-x-0 h-px bg-[#ffff00] shadow-[0_0_14px_#ffff00] pointer-events-none"
+              />
+            </motion.div>
+          </motion.div>
 
           {/* Center Column (4 cols): Philosophy, Recognition, Resume Download */}
           <div className="lg:col-span-4 space-y-3 flex flex-col justify-between">
-            <div className="p-4 rounded-xl cyber-glass border border-white/10">
-              <h3 className="font-mono text-xs text-[#9df133] uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
+            <motion.div variants={blockVariants} className="p-4 rounded-xl cyber-glass border border-white/10">
+              <h3 className="font-mono text-xs text-[#ffff00] uppercase tracking-wider mb-2 flex items-center gap-1.5 font-bold">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>AI-First Engineering Ethos</span>
               </h3>
-              <p className="text-xs text-white/80 leading-relaxed font-sans mb-3">
-                &ldquo;I work AI-first &mdash; pairing agentic tooling (Claude Code, Copilot) with sound architecture to ship production systems solo at team speed.&rdquo;
+              <p className="text-xs text-white/80 leading-relaxed font-sans mb-3 min-h-[3.75rem]">
+                <Typewriter
+                  active={deckRevealed}
+                  text={"\u201cI work AI-first \u2014 pairing agentic tooling (Claude Code, Copilot) with sound architecture to ship production systems solo at team speed.\u201d"}
+                />
               </p>
               <div className="space-y-1.5 font-mono text-[10px] text-white/60">
-                <div className="p-2 rounded bg-white/[0.02] border border-white/[0.06]">
-                  <span className="text-[#9df133] font-bold block mb-0.5">GE Best Product Award</span>
+                <div className="p-2 rounded bg-white/[0.02] border border-white/[0.06] hover:border-[#ffff00]/40 transition-colors">
+                  <span className="text-[#ffff00] font-bold block mb-0.5">GE Best Product Award</span>
                   <span>ViewIT Visualizer ($3M Saved)</span>
                 </div>
-                <div className="p-2 rounded bg-white/[0.02] border border-white/[0.06]">
-                  <span className="text-[#9df133] font-bold block mb-0.5">SRM University B.Tech</span>
+                <div className="p-2 rounded bg-white/[0.02] border border-white/[0.06] hover:border-[#ffff00]/40 transition-colors">
+                  <span className="text-[#ffff00] font-bold block mb-0.5">SRM University B.Tech</span>
                   <span>8.45 CGPA &middot; Computer Science</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Quick Resume Download Action */}
-            <div className="p-3.5 rounded-lg bg-white/[0.02] border border-white/10 flex items-center justify-between">
+            <motion.div
+              variants={blockVariants}
+              whileHover={hoverLift}
+              className="p-3.5 rounded-lg bg-white/[0.02] border border-white/10 hover:border-[#ffff00]/40 transition-colors flex items-center justify-between"
+            >
               <div>
                 <span className="text-xs font-mono font-bold text-white block">Shivang Chauhan CV</span>
                 <span className="text-[10px] font-mono text-white/40">12+ YRS &middot; SDE III &middot; PDF (822 KB)</span>
@@ -246,27 +339,44 @@ export default function AboutSection() {
                 download="Shivang_Chauhan_CV.pdf"
                 onClick={playClick}
                 onMouseEnter={playHover}
-                className="px-3.5 py-1.5 rounded curtis-notch font-mono text-xs font-bold text-black bg-[#9df133] hover:bg-[#b4f000] transition-all flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded curtis-notch font-mono text-xs font-bold text-black bg-[#ffff00] hover:bg-[#ffff66] transition-all flex items-center gap-1.5"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>DOWNLOAD</span>
               </a>
-            </div>
+            </motion.div>
           </div>
 
           {/* Right Column (4 cols): Direct Contact Command Center */}
           <div className="lg:col-span-4 space-y-3 flex flex-col justify-between">
+            {/* Channel status */}
+            <motion.div
+              variants={blockVariants}
+              className="flex items-center gap-2 font-mono text-[10px] text-white/45 uppercase tracking-wider"
+            >
+              <span className="relative flex w-2 h-2">
+                <span className="absolute inset-0 rounded-full bg-[#ffff00]/60 animate-ping" />
+                <span className="relative w-2 h-2 rounded-full bg-[#ffff00]" />
+              </span>
+              <span>CHANNEL OPEN &middot; BANGALORE &middot; IST</span>
+            </motion.div>
+
             {/* Direct Email Card */}
-            <div className="p-4 rounded-xl cyber-glass border border-white/10 flex items-center justify-between">
+            <motion.div
+              variants={blockVariants}
+              whileHover={hoverLift}
+              className="p-4 rounded-xl cyber-glass border border-white/10 hover:border-[#ffff00]/40 transition-colors flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded bg-[#9df133]/10 text-[#9df133]">
-                  <Mail className="w-4 h-4" />
+                <div className="relative p-2 rounded bg-[#ffff00]/10 text-[#ffff00]">
+                  <span aria-hidden className="absolute inset-0 rounded bg-[#ffff00]/20 animate-ping [animation-duration:2.4s]" />
+                  <Mail className="relative w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] font-mono text-white/40 block">DIRECT EMAIL</span>
                   <a
                     href={`mailto:${email}`}
-                    className="text-xs font-mono text-white hover:text-[#9df133] transition-colors"
+                    className="text-xs font-mono text-white hover:text-[#ffff00] transition-colors"
                   >
                     {email}
                   </a>
@@ -274,24 +384,33 @@ export default function AboutSection() {
               </div>
               <button
                 onClick={handleCopyEmail}
-                className="px-3 py-1.5 rounded curtis-notch font-mono text-[10px] bg-white/[0.05] hover:bg-[#9df133] hover:text-black border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
+                className={`px-3 py-1.5 rounded curtis-notch font-mono text-[10px] border transition-all flex items-center gap-1 cursor-pointer ${
+                  copiedEmail
+                    ? "bg-[#ffff00] text-black border-[#ffff00]"
+                    : "bg-white/[0.05] hover:bg-[#ffff00] hover:text-black border-white/10"
+                }`}
               >
-                {copiedEmail ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedEmail ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedEmail ? "COPIED" : "COPY"}</span>
               </button>
-            </div>
+            </motion.div>
 
             {/* Direct Phone / WhatsApp Card */}
-            <div className="p-4 rounded-xl cyber-glass border border-white/10 flex items-center justify-between">
+            <motion.div
+              variants={blockVariants}
+              whileHover={hoverLift}
+              className="p-4 rounded-xl cyber-glass border border-white/10 hover:border-[#ffff00]/40 transition-colors flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded bg-[#9df133]/10 text-[#9df133]">
-                  <Phone className="w-4 h-4" />
+                <div className="relative p-2 rounded bg-[#ffff00]/10 text-[#ffff00]">
+                  <span aria-hidden className="absolute inset-0 rounded bg-[#ffff00]/20 animate-ping [animation-duration:2.4s] [animation-delay:1.2s]" />
+                  <Phone className="relative w-4 h-4" />
                 </div>
                 <div>
                   <span className="text-[10px] font-mono text-white/40 block">PHONE / WHATSAPP</span>
                   <a
                     href={`tel:${phone.replace(/\s+/g, "")}`}
-                    className="text-xs sm:text-sm font-mono text-white hover:text-[#9df133] transition-colors"
+                    className="text-xs sm:text-sm font-mono text-white hover:text-[#ffff00] transition-colors"
                   >
                     {phone}
                   </a>
@@ -299,15 +418,22 @@ export default function AboutSection() {
               </div>
               <button
                 onClick={handleCopyPhone}
-                className="px-3 py-1.5 rounded curtis-notch font-mono text-[10px] bg-white/[0.05] hover:bg-[#9df133] hover:text-black border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
+                className={`px-3 py-1.5 rounded curtis-notch font-mono text-[10px] border transition-all flex items-center gap-1 cursor-pointer ${
+                  copiedPhone
+                    ? "bg-[#ffff00] text-black border-[#ffff00]"
+                    : "bg-white/[0.05] hover:bg-[#ffff00] hover:text-black border-white/10"
+                }`}
               >
-                {copiedPhone ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedPhone ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedPhone ? "COPIED" : "COPY"}</span>
               </button>
-            </div>
+            </motion.div>
 
             {/* Jump back to Hero Button */}
-            <div className="pt-2 flex items-center justify-between font-mono text-xs text-white/40">
+            <motion.div
+              variants={blockVariants}
+              className="pt-2 flex items-center justify-between font-mono text-xs text-white/40"
+            >
               <button
                 onClick={() => {
                   playClick();
@@ -318,26 +444,26 @@ export default function AboutSection() {
                   }
                 }}
                 onMouseEnter={playHover}
-                className="flex items-center gap-2 hover:text-[#9df133] transition-colors cursor-pointer"
+                className="flex items-center gap-2 hover:text-[#ffff00] transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>RETURN TO HERO [START]</span>
               </button>
               <span>&copy; 2026 SHIVANG CHAUHAN</span>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* GARAGE DOOR GREEN CARD:
+      {/* GARAGE DOOR YELLOW CARD:
           - Desktop: Absolute 72vh card rising smoothly from bottom on scroll
           - Mobile/Tablet: Natural full-width in-flow footer */}
       <div
         id="garage-footer"
         className={
           isDesktop
-            ? "absolute inset-x-0 bottom-0 z-40 bg-[#9df133] text-[#0a0a0a] shadow-[0_-24px_60px_rgba(0,0,0,0.85)] border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden"
-            : "relative w-full bg-[#9df133] text-[#0a0a0a] shadow-2xl border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden mt-12"
+            ? "absolute inset-x-0 bottom-0 z-40 bg-[#ffff00] text-[#0a0a0a] shadow-[0_-24px_60px_rgba(0,0,0,0.85)] border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden"
+            : "relative w-full bg-[#ffff00] text-[#0a0a0a] shadow-2xl border-t border-[#0a0a0a]/20 flex flex-col justify-between overflow-hidden mt-12"
         }
         style={{
           height: isDesktop ? "72vh" : "auto",
@@ -345,6 +471,11 @@ export default function AboutSection() {
           transition: isDesktop ? "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)" : "none",
         }}
       >
+        {/* Hazard stripes along the door's leading edge */}
+        <div aria-hidden className="h-1.5 w-full overflow-hidden bg-[#0a0a0a] shrink-0">
+          <div className="hazard-stripes h-full w-[200%]" />
+        </div>
+
         {/* Top Half of Green Card: CTA & Links */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 border-b border-[#0a0a0a]/15">
           {/* Left CTA: 7 cols */}
@@ -369,7 +500,7 @@ export default function AboutSection() {
                 href="mailto:chauhanshivang4@gmail.com"
                 onClick={playClick}
                 onMouseEnter={playHover}
-                className="px-5 py-3 rounded curtis-notch font-mono text-xs font-black text-[#0a0a0a] border border-[#0a0a0a] bg-transparent hover:bg-[#0a0a0a] hover:text-[#9df133] transition-all tracking-wider uppercase flex items-center gap-2"
+                className="px-5 py-3 rounded curtis-notch font-mono text-xs font-black text-[#0a0a0a] border border-[#0a0a0a] bg-transparent hover:bg-[#0a0a0a] hover:text-[#ffff00] transition-all tracking-wider uppercase flex items-center gap-2"
               >
                 <span>SHOOT A MESSAGE</span>
               </a>
@@ -378,7 +509,7 @@ export default function AboutSection() {
                 download="Shivang_Chauhan_CV.pdf"
                 onClick={playClick}
                 onMouseEnter={playHover}
-                className="px-5 py-3 rounded curtis-notch font-mono text-xs font-black text-[#0a0a0a] border border-[#0a0a0a] bg-transparent hover:bg-[#0a0a0a] hover:text-[#9df133] transition-all tracking-wider uppercase flex items-center gap-2"
+                className="px-5 py-3 rounded curtis-notch font-mono text-xs font-black text-[#0a0a0a] border border-[#0a0a0a] bg-transparent hover:bg-[#0a0a0a] hover:text-[#ffff00] transition-all tracking-wider uppercase flex items-center gap-2"
               >
                 <span>DOWNLOAD CV &darr;</span>
               </a>
@@ -432,7 +563,7 @@ export default function AboutSection() {
         </div>
 
         {/* Bottom Giant Dot-Matrix Title (Image 2: PORTFOLIO/SHIVANG) */}
-        <div className="w-full relative px-2 sm:px-4 py-2 sm:py-3 bg-[#9df133] overflow-hidden flex items-center justify-center">
+        <div className="w-full relative px-2 sm:px-4 py-2 sm:py-3 bg-[#ffff00] overflow-hidden flex items-center justify-center">
           <DotMatrixBanner text="PORTFOLIO/SHIVANG" className="w-full" />
         </div>
       </div>

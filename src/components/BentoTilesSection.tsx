@@ -1,95 +1,19 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { motion, type TargetAndTransition, type Transition } from "framer-motion";
 import { useSound } from "./SoundManager";
 import { useHorizontalScroll } from "./HorizontalLayout";
 import ScrollGuidance from "./ScrollGuidance";
+import CurtisOdometer from "./CurtisOdometer";
 
 interface BentoTilesSectionProps {
   scrollProgress?: number;
 }
 
-// Odometer digit strip rolling vertically on scroll with crisp clipping
-function OdometerDigit({
-  target,
-  progress,
-  className = "",
-}: {
-  target: number;
-  progress: number;
-  className?: string;
-}) {
-  const digits = Array.from({ length: target + 1 }, (_, i) => i % 10);
-  const clampedProgress = Math.min(1, Math.max(0, progress));
-  const offset = target * clampedProgress;
-
-  return (
-    <span
-      className={`inline-block overflow-hidden h-[1.15em] leading-[1.15em] align-baseline ${className}`}
-      style={{ verticalAlign: "baseline" }}
-    >
-      <span
-        className="flex flex-col items-center select-none"
-        style={{
-          transform: `translateY(-${offset * 1.15}em)`,
-          transition: "transform 0.08s ease-out",
-        }}
-      >
-        {digits.map((d, i) => (
-          <span
-            key={i}
-            className="h-[1.15em] leading-[1.15em] flex items-center justify-center font-mono font-bold"
-          >
-            {d}
-          </span>
-        ))}
-      </span>
-    </span>
-  );
-}
-
-// Odometer component for stat numbers like "30+", "12+", "7+", "99.98%", "94.6%"
-function CurtisOdometer({
-  value,
-  progress,
-  className = "",
-}: {
-  value: string;
-  progress: number;
-  className?: string;
-}) {
-  // Once animation has settled (>= 0.95), render clean static typography to avoid any sub-pixel overlap
-  if (progress >= 0.95) {
-    return <span className={`inline-block font-mono font-bold leading-none ${className}`}>{value}</span>;
-  }
-
-  const match = value.match(/^([\d.]+)(.*)$/);
-  if (!match) return <span className={`inline-block font-mono font-bold leading-none ${className}`}>{value}</span>;
-
-  const numPart = match[1];
-  const suffix = match[2];
-
-  return (
-    <span className={`inline-flex items-baseline font-mono font-bold tracking-tighter leading-none ${className}`}>
-      {numPart.split("").map((char, idx) => {
-        if (char === ".") {
-          return (
-            <span key={idx} className="h-[1.15em] leading-[1.15em]">
-              .
-            </span>
-          );
-        }
-        const digit = parseInt(char, 10);
-        return <OdometerDigit key={idx} target={digit} progress={progress} />;
-      })}
-      {suffix && <span className="ml-0.5">{suffix}</span>}
-    </span>
-  );
-}
-
 export default function BentoTilesSection({ scrollProgress: propProgress }: BentoTilesSectionProps) {
-  const { playHover } = useSound();
+  const { playHover, playClick } = useSound();
   const { scrollProgress: ctxProgress, isDesktop } = useHorizontalScroll();
   const scrollProgress = propProgress !== undefined ? propProgress : ctxProgress;
 
@@ -332,6 +256,115 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
     },
   ];
 
+  // -------------------------------------------------------------------------
+  // Gravity toggle. Every tile keeps its scroll-driven aperture reveal, but
+  // once gravity is on it drops to the floor of its grid, landing on whichever
+  // tile of the same column is below it, with a small bounce and tilt. Off
+  // again floats everything back. Desktop tiles fall inside their absolute
+  // canvas area; phone tiles fall into the drop room padded under each grid.
+  // -------------------------------------------------------------------------
+  type FallTarget = { y: number; x: number; rotate: number; duration: number };
+  type TileSlot = { id: string; col: number; row: number };
+  const STACK_GAP = 6;
+
+  const [gravityOn, setGravityOn] = useState(false);
+  const [fallTargets, setFallTargets] = useState<Record<string, FallTarget>>({});
+  const [mobileFallTargets, setMobileFallTargets] = useState<Record<string, FallTarget>>({});
+  // The desktop canvas and the phone grid both render every tile id, so each
+  // layout keeps its own element map.
+  const tileRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const mobileTileRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const s1AreaRef = useRef<HTMLDivElement>(null);
+  const s2AreaRef = useRef<HTMLDivElement>(null);
+  const m1GridRef = useRef<HTMLDivElement>(null);
+  const m2GridRef = useRef<HTMLDivElement>(null);
+
+  // Phone grid: two columns, tiles in array order (the lever sits on its own
+  // row above them, so it is not in any column's path).
+  const mobileSlots = (tiles: { id: string }[]): TileSlot[] =>
+    tiles.map((t, i) => ({ id: t.id, col: (i % 2) + 1, row: Math.floor(i / 2) + 1 }));
+
+  const computeFall = (
+    tiles: TileSlot[],
+    area: HTMLDivElement | null,
+    refs: Record<string, HTMLDivElement | null>,
+    targets: Record<string, FallTarget>
+  ) => {
+    // A hidden layout (display: none) measures as 0 and contributes nothing.
+    if (!area || area.clientHeight === 0) return;
+    // offsetTop / offsetHeight are layout values, so a tile mid-animation
+    // still measures from its grid position. `area` is the offsetParent.
+    const floor = area.clientHeight;
+    tiles.forEach((tile) => {
+      const el = refs[tile.id];
+      if (!el) return;
+      const below = tiles.filter((t) => t.col === tile.col && t.row > tile.row).length;
+      const floorTop = floor - el.offsetHeight * (below + 1) - STACK_GAP * below;
+      const drop = Math.max(0, floorTop - el.offsetTop);
+      const dir = tile.col % 2 === 0 ? 1 : -1;
+      // Tiles resting on the floor sit almost flat; tiles landing on top tilt.
+      const tilt =
+        below === 0 ? dir * (0.6 + (tile.row % 3) * 0.5) : dir * (2.5 + ((tile.col * 7 + tile.row * 3) % 4));
+      targets[tile.id] = {
+        y: drop,
+        x: dir * (2 + (tile.row % 3) * 2),
+        rotate: tilt,
+        duration: 0.45 + drop / 1300,
+      };
+    });
+  };
+
+  const toggleGravity = () => {
+    playClick();
+    if (gravityOn) {
+      setGravityOn(false);
+      return;
+    }
+    const desktop: Record<string, FallTarget> = {};
+    computeFall(screen1Tiles.map((t) => ({ id: t.id, col: t.col, row: t.row })), s1AreaRef.current, tileRefs.current, desktop);
+    computeFall(screen2Tiles.map((t) => ({ id: t.id, col: t.col, row: t.row })), s2AreaRef.current, tileRefs.current, desktop);
+    const mobile: Record<string, FallTarget> = {};
+    computeFall(mobileSlots(screen1Tiles), m1GridRef.current, mobileTileRefs.current, mobile);
+    computeFall(mobileSlots(screen2Tiles), m2GridRef.current, mobileTileRefs.current, mobile);
+    setFallTargets(desktop);
+    setMobileFallTargets(mobile);
+    setGravityOn(true);
+  };
+
+  // Motion props per tile, memoised so scroll re-renders hand framer-motion
+  // the same objects and never restart a fall in progress.
+  const tileMotion = useMemo(() => {
+    const restTransition: Transition = { type: "spring", stiffness: 80, damping: 15, mass: 1 };
+    const rest: { animate: TargetAndTransition; transition: Transition } = {
+      animate: { y: 0, x: 0, rotate: 0 },
+      transition: restTransition,
+    };
+    const build = (targets: Record<string, FallTarget>) => {
+      const map: Record<string, { animate: TargetAndTransition; transition: Transition }> = {};
+      Object.entries(targets).forEach(([id, fall]) => {
+        const bounce = Math.max(8, fall.y * 0.07);
+        map[id] = {
+          animate: {
+            y: [null, fall.y, fall.y - bounce, fall.y],
+            x: fall.x,
+            rotate: [null, fall.rotate * 0.4, fall.rotate],
+          },
+          transition: {
+            y: { duration: fall.duration, times: [0, 0.6, 0.8, 1], ease: ["easeIn", "easeOut", "easeIn"] },
+            rotate: { duration: fall.duration, ease: "easeOut" },
+            x: { duration: fall.duration, ease: "easeOut" },
+          },
+        };
+      });
+      return map;
+    };
+    return { rest, map: build(fallTargets), mobileMap: build(mobileFallTargets) };
+  }, [fallTargets, mobileFallTargets]);
+
+  const motionFor = (id: string) => (gravityOn && tileMotion.map[id] ? tileMotion.map[id] : tileMotion.rest);
+  const mobileMotionFor = (id: string) =>
+    gravityOn && tileMotion.mobileMap[id] ? tileMotion.mobileMap[id] : tileMotion.rest;
+
   // Helper function to render a tile in the exact Curtis geometric notch style
   const renderCurtisTile = (tile: any, screenProgress: number, isMobile = false) => {
     const isHovered = hoveredBox === tile.id;
@@ -360,9 +393,16 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
 
     const desktopPos = `${colClasses[tile.col]} ${rowClasses[tile.row]}`;
 
+    const tileMotionProps = isMobile ? mobileMotionFor(tile.id) : motionFor(tile.id);
+
     return (
-      <div
+      <motion.div
         key={tile.id}
+        ref={(el: HTMLDivElement | null) => {
+          (isMobile ? mobileTileRefs : tileRefs).current[tile.id] = el;
+        }}
+        initial={false}
+        {...tileMotionProps}
         onClick={() => {
           setHoveredBox(hoveredBox === tile.id ? null : tile.id);
           playHover();
@@ -378,8 +418,8 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         onMouseLeave={() => setHoveredBox(null)}
         className={
           isMobile
-            ? "stat-box group relative w-full h-[142px] min-h-[135px] select-none cursor-pointer transition-all duration-200"
-            : `stat-box group absolute w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] select-none cursor-pointer transition-all duration-200 ${desktopPos}`
+            ? "stat-box group relative w-full h-[120px] min-h-[116px] select-none cursor-pointer"
+            : `stat-box group absolute w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] select-none cursor-pointer ${desktopPos}`
         }
         style={{
           // Curtis exact aperture reveal formula (unfolds clip-path as user scrolls):
@@ -387,31 +427,31 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           willChange: "clip-path, transform",
         }}
       >
-        {/* Outer Notch Border Stroke: Olive green by default, Pitch Black on Hover */}
+        {/* Outer Notch Border Stroke: Mustard yellow by default, Pitch Black on Hover */}
         <div
           className={`absolute inset-0 transition-colors duration-200 ${
-            isHovered ? "bg-[#000000]" : "bg-[#599f00] group-hover:bg-[#000000]"
+            isHovered ? "bg-[#000000]" : "bg-[#a09400] group-hover:bg-[#000000]"
           }`}
           style={{
             clipPath:
               "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 125px, 11.71px 113px, 11.71px 52px, 0 40px)",
           }}
         >
-          {/* Inner Notch Box Fill (inset 2px): Olive green by default, Pure Black on Hover */}
+          {/* Inner Notch Box Fill (inset 2px): Mustard yellow by default, Pure Black on Hover */}
           <div
-            className={`absolute inset-[2px] ${isMobile ? "p-2.5 sm:p-3" : "p-3.5"} flex flex-col justify-between transition-colors duration-200 ${
+            className={`absolute inset-[2px] ${isMobile ? "p-3.5 pl-6 sm:p-4 sm:pl-6" : "p-4 pl-5"} flex flex-col justify-between transition-colors duration-200 ${
               isHovered
                 ? "bg-[#0a0a0a] text-white shadow-2xl"
-                : "bg-[#84c72f] text-[#0a0a0a] group-hover:bg-[#0a0a0a] group-hover:text-white group-hover:shadow-2xl"
+                : "bg-[#e0d000] text-[#0a0a0a] group-hover:bg-[#0a0a0a] group-hover:text-white group-hover:shadow-2xl"
             }`}
             style={{
               clipPath:
                 "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 125px, 11.71px 113px, 11.71px 52px, 0 40px)",
             }}
           >
-            {/* Top-Left Illuminated Triangular Fold (Neon Green on Hover) */}
+            {/* Top-Left Illuminated Triangular Fold (Neon Yellow on Hover) */}
             <div
-              className={`absolute top-0 left-0 w-4 h-4 bg-[#9df133] transition-opacity duration-200 pointer-events-none ${
+              className={`absolute top-0 left-0 w-4 h-4 bg-[#ffff00] transition-opacity duration-200 pointer-events-none ${
                 isHovered ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               }`}
               style={{
@@ -460,7 +500,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
                   <div className="flex flex-col pr-1 sm:pr-2">
                     <span
                       className={`font-mono ${isMobile ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]"} uppercase tracking-wider font-black mb-0.5 ${
-                        isHovered ? "text-[#9df133]" : "text-[#0a0a0a] group-hover:text-[#9df133]"
+                        isHovered ? "text-[#ffff00]" : "text-[#0a0a0a] group-hover:text-[#ffff00]"
                       }`}
                     >
                       {tile.sub}
@@ -511,8 +551,8 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
                       <span
                         className={`font-mono ${isMobile ? "text-[8px]" : "text-[9px]"} uppercase px-1 py-0.5 rounded font-black ${
                           isHovered
-                            ? "bg-[#9df133] text-[#050505]"
-                            : "bg-[#0a0a0a] text-[#9df133] group-hover:bg-[#9df133] group-hover:text-[#050505]"
+                            ? "bg-[#ffff00] text-[#050505]"
+                            : "bg-[#0a0a0a] text-[#ffff00] group-hover:bg-[#ffff00] group-hover:text-[#050505]"
                         }`}
                       >
                         {tile.badge}
@@ -531,36 +571,36 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
   return (
     <section
       id="capabilities-tiles"
-      className="relative w-full lg:w-[200vw] h-auto lg:h-screen shrink-0 bg-[#9df133] text-[#0a0a0a] flex flex-col lg:flex-row select-none overflow-visible lg:overflow-hidden"
+      className="relative w-full lg:w-[200vw] h-auto lg:h-screen shrink-0 bg-[#ffff00] text-[#0a0a0a] flex flex-col lg:flex-row select-none overflow-visible lg:overflow-hidden"
     >
       {/* 6 Vertical Guidelines across Screen 1 & 2 (Desktop only) */}
       <div className="hidden lg:flex absolute inset-0 justify-between pointer-events-none z-0">
-        <div className="w-px h-full bg-[#599f00]/30" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/30" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/25" />
-        <div className="w-px h-full bg-[#599f00]/30" />
+        <div className="w-px h-full bg-[#a09400]/30" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/30" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/25" />
+        <div className="w-px h-full bg-[#a09400]/30" />
       </div>
 
       {/* ========================================================================= */}
       {/* SCREEN 1: Authentic Curtis 5-Column Staggered Chessboard                  */}
       {/* ========================================================================= */}
-      <div ref={screen1Ref} className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#599f00]/30 z-10">
+      <div ref={screen1Ref} className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-[#a09400]/30 z-10">
         {/* Top Header Bar (Matching Curtis telemetry) */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 pr-[4.75rem] sm:pr-20 lg:pr-24 border-b-2 border-[#a09400]/40 gap-2">
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#0a0a0a]">
               <polygon points="12 2 22 20 2 20" stroke="currentColor" strokeWidth="2.5" fill="none" />
@@ -574,50 +614,39 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-0.5 rounded bg-[#0a0a0a] text-[#9df133] text-[10px] font-mono font-black shadow-sm">
+            <span className="px-2.5 py-0.5 rounded bg-[#0a0a0a] text-[#ffff00] text-[10px] font-mono font-black shadow-sm">
               SCREEN 1 OF 2 &middot; CORE CAPABILITIES
             </span>
           </div>
         </div>
 
         {/* Screen 1 Canvas Area for Desktop (5 Alternating Staggered Columns) */}
-        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
+        <div ref={s1AreaRef} className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
           {screen1Tiles.map((tile) => renderCurtisTile(tile, effectiveS1Progress, false))}
 
-          {/* Freestanding Monochrome Pixel Art Pyramid in Column 1, Row 3 */}
-          <div
-            className="absolute lg:left-[2.5%] lg:top-[calc(1.75rem+50vh)] w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] flex flex-col items-center justify-center pointer-events-none transition-transform duration-300"
-            style={{
-              transform: `scale(${Math.min(1, Math.max(0, effectiveS1Progress * 1.8))})`,
-              opacity: Math.min(1, Math.max(0, effectiveS1Progress * 2.2)),
-            }}
-          >
-            <CurtisPixelPyramid />
-            <span className="font-mono text-[9px] font-black text-[#0a0a0a] mt-2 uppercase tracking-widest">
-              // AGENTIC AI CORE
-            </span>
+          {/* Gravity lever in Column 1, Row 3: bolted in place, it never falls */}
+          <div className="absolute lg:left-[2.5%] lg:top-[calc(1.75rem+50vh)] w-[92vw] sm:w-[45vw] lg:w-[17.5vw] h-[22vh] min-h-[135px] max-h-[175px] z-20">
+            <GravityLever on={gravityOn} onToggle={toggleGravity} onHover={playHover} progress={effectiveS1Progress} />
           </div>
         </div>
 
         {/* Screen 1 Grid Area for Mobile & Tablet (< 1024px) */}
         <div className="relative w-full block lg:hidden my-4 sm:my-6">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
-            {screen1Tiles.map((tile) => renderCurtisTile(tile, effectiveS1Progress, true))}
-
-            {/* Freestanding Pixel Pyramid inside 2-Column Mobile Grid in Row 4, Col 2 (Matching Curtis Reference) */}
-            <div
-              className="stat-box relative w-full h-[142px] min-h-[135px] flex flex-col items-center justify-center p-2.5 sm:p-3 select-none"
-              style={{
-                transform: `scale(${Math.min(1, Math.max(0.75, effectiveS1Progress * 1.2))})`,
-                opacity: Math.min(1, Math.max(0.4, effectiveS1Progress * 1.5)),
-                transition: "transform 0.3s ease-out, opacity 0.3s ease-out",
-              }}
-            >
-              <CurtisPixelPyramid />
-              <span className="font-mono text-[8.5px] sm:text-[9px] font-black text-[#0a0a0a] mt-2 uppercase tracking-widest text-center">
-                // AGENTIC AI CORE
-              </span>
+          {/* The grid is the tiles' offsetParent; its bottom padding is the
+              drop room they fall into when gravity is on. */}
+          <div ref={m1GridRef} className="relative grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full pb-[150px]">
+            {/* Gravity lever on its own row above the tiles, clear of every column */}
+            <div className="col-span-2 relative w-full h-[110px] select-none">
+              <GravityLever
+                on={gravityOn}
+                onToggle={toggleGravity}
+                onHover={playHover}
+                progress={Math.min(1, Math.max(0.55, effectiveS1Progress * 1.2))}
+                compact
+              />
             </div>
+
+            {screen1Tiles.map((tile) => renderCurtisTile(tile, effectiveS1Progress, true))}
           </div>
 
           {/* Small Scroll Guidance on Mobile */}
@@ -627,7 +656,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         </div>
 
         {/* Bottom Continuity Banner */}
-        <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#0a0a0a] pt-2 border-t-2 border-[#599f00]/40">
+        <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#0a0a0a] pt-2 border-t-2 border-[#a09400]/40">
           <span className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#0a0a0a] animate-ping" />
             <span>CONTINUOUS CAPABILITIES RUNTIME</span>
@@ -644,7 +673,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
       {/* ========================================================================= */}
       <div ref={screen2Ref} className="relative w-full lg:w-screen h-auto lg:h-screen shrink-0 flex flex-col justify-between p-4 sm:p-8 lg:p-10 z-10 mt-8 lg:mt-0">
         {/* Top Header Bar */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 border-b-2 border-[#599f00]/40 gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between font-mono text-[11px] font-bold uppercase tracking-wider text-[#0a0a0a] pb-2.5 pr-[4.75rem] sm:pr-20 lg:pr-24 border-b-2 border-[#a09400]/40 gap-2">
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#0a0a0a]">
               <polygon points="12 2 22 20 2 20" stroke="currentColor" strokeWidth="2.5" fill="none" />
@@ -657,20 +686,20 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-0.5 rounded bg-[#0a0a0a] text-[#9df133] text-[10px] font-mono font-black shadow-sm">
+            <span className="px-2.5 py-0.5 rounded bg-[#0a0a0a] text-[#ffff00] text-[10px] font-mono font-black shadow-sm">
               SCREEN 2 OF 2 &middot; DISTRIBUTED SYSTEMS
             </span>
           </div>
         </div>
 
         {/* Screen 2 Canvas Area for Desktop */}
-        <div className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
+        <div ref={s2AreaRef} className="relative w-full h-[calc(100vh-8.5rem)] my-auto hidden lg:block">
           {screen2Tiles.map((tile) => renderCurtisTile(tile, effectiveS2Progress, false))}
         </div>
 
         {/* Screen 2 Grid Area for Mobile & Tablet (< 1024px) */}
         <div className="relative w-full block lg:hidden my-4 sm:my-6">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+          <div ref={m2GridRef} className="relative grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full pb-[150px]">
             {screen2Tiles.map((tile) => renderCurtisTile(tile, effectiveS2Progress, true))}
           </div>
 
@@ -681,7 +710,7 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
         </div>
 
         {/* Bottom Status Cue */}
-        <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#0a0a0a] pt-2 border-t-2 border-[#599f00]/40">
+        <div className="flex items-center justify-between font-mono text-[11px] font-bold text-[#0a0a0a] pt-2 border-t-2 border-[#a09400]/40">
           <span>END OF CAPABILITIES TRACK</span>
           <span className="tracking-widest flex items-center gap-2 font-bold">
             <span>CONTINUE SCROLLING FOR SELECTED ENTERPRISE PRODUCTS</span>
@@ -693,39 +722,89 @@ export default function BentoTilesSection({ scrollProgress: propProgress }: Bent
   );
 }
 
-// Authentic Curtis Freestanding Monochrome Pixel Art Pyramid
-function CurtisPixelPyramid() {
-  const pixelGrid = [
-    [0, 0, 0, 1, 0, 0, 0],
-    [0, 0, 1, 0, 1, 0, 0],
-    [0, 1, 0, 0, 0, 1, 0],
-    [1, 0, 0, 1, 0, 0, 1],
-    [0, 1, 1, 0, 1, 1, 0],
-    [1, 1, 1, 1, 1, 1, 1],
-  ];
+// Physical lever that owns the gravity state. The arm pivots at its base:
+// leaning left is OFF, swung right is ON. It moves on a spring so it lands
+// with a little overshoot, and the knob lights neon once gravity is engaged.
+function GravityLever({
+  on,
+  onToggle,
+  onHover,
+  progress,
+  compact = false,
+}: {
+  on: boolean;
+  onToggle: () => void;
+  onHover: () => void;
+  progress: number; // screen reveal progress, drives the scale-in
+  compact?: boolean;
+}) {
+  const width = compact ? 104 : 124;
+  const height = compact ? 54 : 64;
+  const arm = compact ? 38 : 46;
 
   return (
-    <svg
-      width="64"
-      height="56"
-      viewBox="0 0 7 6"
-      className="text-[#0a0a0a] drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]"
+    <button
+      type="button"
+      onClick={onToggle}
+      onMouseEnter={onHover}
+      aria-pressed={on}
+      aria-label={on ? "Turn gravity off" : "Turn gravity on"}
+      className="group relative w-full h-full flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none outline-none"
+      style={{
+        transform: `scale(${Math.min(1, Math.max(0, progress * 1.8))})`,
+        opacity: Math.min(1, Math.max(0, progress * 2.2)),
+        transition: "transform 0.3s ease-out, opacity 0.3s ease-out",
+      }}
     >
-      {pixelGrid.map((row, r) =>
-        row.map((val, c) =>
-          val ? (
-            <rect
-              key={`${r}-${c}`}
-              x={c}
-              y={r}
-              width="0.84"
-              height="0.84"
-              fill="currentColor"
-              rx="0.1"
-            />
-          ) : null
-        )
-      )}
-    </svg>
+      <span className="font-mono text-[9px] font-black uppercase tracking-widest text-[#0a0a0a]">
+        // GRAVITY LEVER
+      </span>
+
+      <div className="relative" style={{ width, height }}>
+        {/* Dashed travel arc */}
+        <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 w-full h-full text-[#0a0a0a]/35">
+          <path
+            d={`M ${width / 2 - arm * 0.78} ${height - 6} A ${arm} ${arm} 0 0 1 ${width / 2 + arm * 0.78} ${height - 6}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeDasharray="3 4"
+          />
+        </svg>
+
+        {/* Base plate */}
+        <div
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[64px] h-[12px] bg-[#0a0a0a]"
+          style={{ clipPath: "polygon(0 100%, 8px 0, calc(100% - 8px) 0, 100% 100%)" }}
+        />
+
+        {/* Arm, pivoting at the base */}
+        <motion.div
+          initial={false}
+          animate={{ rotate: on ? 42 : -42 }}
+          transition={{ type: "spring", stiffness: 220, damping: 13, mass: 0.9 }}
+          className="absolute left-1/2 w-[6px] -ml-[3px] origin-bottom bg-[#0a0a0a] rounded-full"
+          style={{ bottom: 10, height: arm }}
+        >
+          <span
+            className={`absolute -top-[10px] left-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-[#0a0a0a] transition-colors duration-200 ${
+              on ? "bg-[#ffff00] shadow-[0_0_14px_rgba(255,255,0,0.9)]" : "bg-[#0a0a0a] group-hover:bg-[#2a2a2a]"
+            }`}
+          />
+        </motion.div>
+
+        {/* Pivot cap */}
+        <div className="absolute bottom-[4px] left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#ffff00] border-2 border-[#0a0a0a] z-10" />
+      </div>
+
+      <div className="flex items-center justify-between font-mono text-[9px] font-black tracking-widest" style={{ width }}>
+        <span className={`transition-colors duration-200 ${on ? "text-[#0a0a0a]/35" : "text-[#0a0a0a]"}`}>OFF</span>
+        <span className={`transition-colors duration-200 ${on ? "text-[#0a0a0a]" : "text-[#0a0a0a]/35"}`}>ON</span>
+      </div>
+
+      <span className="font-mono text-[8px] font-bold uppercase tracking-wider text-[#0a0a0a]/70 text-center">
+        {on ? "GRAVITY ENGAGED \u00b7 PULL TO RESTORE" : "PULL TO TURN ON GRAVITY"}
+      </span>
+    </button>
   );
 }

@@ -16,7 +16,7 @@ const GLYPHS = "01$#_[]{}—=+*^?~<>!/\\X#%";
 export default function ScrambleText({
   text,
   className = "",
-  scrambleColor = "#9df133",
+  scrambleColor = "#ffff00",
   triggerOnView = true,
   speed = 30,
   delay = 0,
@@ -91,7 +91,7 @@ export default function ScrambleText({
         if (!isScrambling) startScramble();
       }}
       className={`inline-block transition-colors duration-150 cursor-default ${className} ${
-        isScrambling ? "text-[#9df133] drop-shadow-[0_0_8px_rgba(157,241,51,0.6)]" : ""
+        isScrambling ? "text-[#ffff00] drop-shadow-[0_0_8px_rgba(255,255,0,0.6)]" : ""
       }`}
     >
       {displayText}

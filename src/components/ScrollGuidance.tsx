@@ -22,13 +22,13 @@ export default function ScrollGuidance({
       <div
         className={`inline-flex items-center gap-2 px-3 py-1 rounded curtis-notch font-bold ${
           isLight
-            ? "bg-[#0a0a0a] text-[#9df133] shadow-lg border border-[#0a0a0a]/30"
-            : "bg-[#050505]/80 text-[#9df133] border border-[#9df133]/40 backdrop-blur-md shadow-[0_0_16px_rgba(157,241,51,0.25)]"
+            ? "bg-[#0a0a0a] text-[#ffff00] shadow-lg border border-[#0a0a0a]/30"
+            : "bg-[#050505]/80 text-[#ffff00] border border-[#ffff00]/40 backdrop-blur-md shadow-[0_0_16px_rgba(255,255,0,0.25)]"
         }`}
       >
         <span
           className={`w-1.5 h-1.5 rounded-full ${
-            isLight ? "bg-[#9df133] animate-ping" : "bg-[#9df133] animate-pulse"
+            isLight ? "bg-[#ffff00] animate-ping" : "bg-[#ffff00] animate-pulse"
           }`}
         />
         <span>{label}</span>
@@ -43,7 +43,7 @@ export default function ScrollGuidance({
         className={`animate-bounce ${
           isLight
             ? "text-[#0a0a0a] drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]"
-            : "text-[#9df133] drop-shadow-[0_0_8px_rgba(157,241,51,0.8)]"
+            : "text-[#ffff00] drop-shadow-[0_0_8px_rgba(255,255,0,0.8)]"
         }`}
       >
         {/* Shaft */}

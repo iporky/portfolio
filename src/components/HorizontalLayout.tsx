@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import PixelTransition from "./PixelTransition";
 import CurtisMenu from "./CurtisMenu";
+import BootScreen from "./BootScreen";
+import TimelineHUD from "./TimelineHUD";
 
 interface HorizontalScrollContextType {
   scrollProgress: number; // 0.0 to 1.0
@@ -30,6 +32,86 @@ const CRITICAL_IMAGES = [
 ];
 const TOTAL_ASSETS = TOTAL_FRAMES + CRITICAL_IMAGES.length;
 
+// The boot screen stays up at least this long so the bar and log read as a
+// sequence instead of a flash on a warm cache, and lingers this long after
+// "SYSTEM ONLINE" before the pixel dissolve starts.
+const BOOT_MIN_MS = 1100;
+const BOOT_SETTLE_MS = 420;
+// How long the dissolve + hero entrance needs before the overlay can unmount.
+const BOOT_DISSOLVE_MS = 1200;
+
+// ---------------------------------------------------------------------------
+// Pinned timeline
+//
+// Every stage is a full viewport width; `pin` is the progress range during
+// which it sits still, and between two pins the track glides one viewport
+// with a cosine ease. `jump` is where a programmatic jump lands: inside the
+// pin, past the point where the stage's own entrance animation has settled.
+// ---------------------------------------------------------------------------
+export interface TimelineStage {
+  id: string;
+  label: string;
+  pin: [number, number];
+  jump: number;
+}
+
+export const TIMELINE_STAGES: TimelineStage[] = [
+  { id: "hero", label: "HERO", pin: [0, 0.09], jump: 0 },
+  { id: "story", label: "STORY", pin: [0.13, 0.29], jump: 0.16 },
+  { id: "capabilities", label: "CAPABILITIES I", pin: [0.33, 0.39], jump: 0.36 },
+  { id: "capabilities-2", label: "CAPABILITIES II", pin: [0.42, 0.48], jump: 0.45 },
+  { id: "work", label: "WORK", pin: [0.52, 0.6], jump: 0.575 },
+  { id: "impact", label: "IMPACT", pin: [0.64, 0.76], jump: 0.71 },
+  { id: "about", label: "ABOUT", pin: [0.8, 1], jump: 0.83 },
+];
+
+// Horizontal track offset (in px) for a timeline progress value.
+export function trackXForProgress(prog: number, viewportWidth: number): number {
+  for (let i = 0; i < TIMELINE_STAGES.length; i++) {
+    const { pin } = TIMELINE_STAGES[i];
+    if (prog <= pin[1]) return i * viewportWidth;
+    const next = TIMELINE_STAGES[i + 1];
+    if (!next) break;
+    if (prog < next.pin[0]) {
+      const t = (prog - pin[1]) / (next.pin[0] - pin[1]);
+      const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
+      return i * viewportWidth + ease * viewportWidth;
+    }
+  }
+  return (TIMELINE_STAGES.length - 1) * viewportWidth;
+}
+
+// Which stage a progress value is closest to (transitions split at their midpoint).
+export function stageIndexForProgress(prog: number): number {
+  for (let i = 0; i < TIMELINE_STAGES.length - 1; i++) {
+    const mid = (TIMELINE_STAGES[i].pin[1] + TIMELINE_STAGES[i + 1].pin[0]) / 2;
+    if (prog < mid) return i;
+  }
+  return TIMELINE_STAGES.length - 1;
+}
+
+// ---------------------------------------------------------------------------
+// Glide tuning (all in seconds / progress-per-second, so the feel is identical
+// on 60Hz and 144Hz displays).
+//
+// SMOOTH_TAU  - time constant of the exponential ease toward the scroll target.
+// MAX_RATE    - hard ceiling on how fast the timeline can advance from user
+//               scrolling. One slide transition spans 0.04 progress, so at
+//               0.15/s a fling crosses a slide in roughly 0.3s of glide plus
+//               the ease-out tail, rather than skipping through it.
+// JUMP_RATE   - ceiling used for menu / HUD jumps, which may need to cover
+//               most of the timeline and should not crawl.
+// ---------------------------------------------------------------------------
+const SMOOTH_TAU = 0.2;
+const MAX_RATE = 0.15;
+const JUMP_RATE = 0.7;
+const SETTLE_EPSILON = 0.00015;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 const HorizontalScrollContext = createContext<HorizontalScrollContextType>({
   scrollProgress: 0,
   scrollX: 0,
@@ -56,12 +138,18 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
 
   // Preloader / Boot Barrier State
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isBooted, setIsBooted] = useState(false);
   const [bootPercent, setBootPercent] = useState(0);
   const [bootStatus, setBootStatus] = useState("INITIALIZING BUFFER...");
+  const [bootAsset, setBootAsset] = useState("");
+  const [bootLog, setBootLog] = useState<string[]>(["MOUNTING RUNTIME ENGINE"]);
   const [preloadedFrames, setPreloadedFrames] = useState<HTMLImageElement[]>([]);
 
   const targetProgressRef = useRef(0);
   const currentProgressRef = useRef(0);
+  // Set by scrollToProgress so the glide loop may use the faster JUMP_RATE
+  // until the track has caught up with the requested position.
+  const jumpingRef = useRef(false);
 
   // Responsive breakpoint tracking (>= 1024px is desktop)
   useEffect(() => {
@@ -80,16 +168,34 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       window.scrollTo(0, 0);
     }
 
+    const bootStartedAt = performance.now();
     let isCancelled = false;
     let loadedCount = 0;
+    let criticalLoaded = 0;
     const frameImages: HTMLImageElement[] = new Array(TOTAL_FRAMES);
+    const milestones = new Set<number>();
+
+    const pushLog = (line: string) => {
+      setBootLog((prev) => [...prev.slice(-5), line]);
+    };
+
+    pushLog(`ALLOCATING FRAME BUFFER · ${TOTAL_FRAMES} FRAMES`);
 
     const onAssetLoaded = (label: string) => {
       if (isCancelled) return;
       loadedCount++;
       const pct = Math.min(100, Math.round((loadedCount / TOTAL_ASSETS) * 100));
       setBootPercent(pct);
+      setBootAsset(label);
       setBootStatus(`BUFFERING ASSETS (${loadedCount}/${TOTAL_ASSETS})`);
+
+      // Milestone lines keep the log moving without printing all 190 assets.
+      for (const mark of [25, 50, 75]) {
+        if (pct >= mark && !milestones.has(mark)) {
+          milestones.add(mark);
+          pushLog(`SEQUENCE DECODED · ${mark}%`);
+        }
+      }
     };
 
     // Load a single frame
@@ -100,7 +206,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
         img.src = `/frames/frame-${frameNum}.webp`;
         const finish = () => {
           frameImages[idx] = img;
-          onAssetLoaded(`frame-${frameNum}`);
+          onAssetLoaded(`frame-${frameNum}.webp`);
           resolve(img);
         };
         img.onload = finish;
@@ -114,7 +220,9 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
         const img = new Image();
         img.src = url;
         const finish = () => {
-          onAssetLoaded(url);
+          onAssetLoaded(url.split("/").pop() || url);
+          criticalLoaded++;
+          if (criticalLoaded === CRITICAL_IMAGES.length) pushLog("CRITICAL ASSETS LINKED");
           resolve(img);
         };
         img.onload = finish;
@@ -136,23 +244,44 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
     const workerPromises = Array.from({ length: concurrency }, () => worker());
     const assetPromises = CRITICAL_IMAGES.map((url) => loadImg(url));
 
+    const timers: number[] = [];
+
     Promise.all([...workerPromises, ...assetPromises]).then(() => {
       if (isCancelled) return;
       setPreloadedFrames(frameImages);
       setBootPercent(100);
-      setBootStatus("ALL 181 FRAMES & ASSETS READY");
-      setTimeout(() => {
-        if (!isCancelled) {
-          setIsLoaded(true);
-          if (typeof window !== "undefined") {
-            window.scrollTo(0, 0);
-          }
-        }
-      }, 350);
+      setBootStatus(`ALL ${TOTAL_FRAMES} FRAMES & ASSETS READY`);
+      pushLog("CALIBRATING HORIZONTAL TIMELINE");
+
+      // Hold the boot screen up to its minimum so the sequence reads on a
+      // warm cache, then announce and lift it.
+      const elapsed = performance.now() - bootStartedAt;
+      const holdFor = Math.max(0, BOOT_MIN_MS - elapsed);
+      timers.push(
+        window.setTimeout(() => {
+          if (isCancelled) return;
+          pushLog("SYSTEM ONLINE");
+          setBootStatus("SYSTEM ONLINE · HANDING OFF TO TIMELINE");
+          timers.push(
+            window.setTimeout(() => {
+              if (isCancelled) return;
+              setIsLoaded(true);
+              window.scrollTo(0, 0);
+              // The overlay stays mounted through its dissolve, then leaves the DOM.
+              timers.push(
+                window.setTimeout(() => {
+                  if (!isCancelled) setIsBooted(true);
+                }, BOOT_DISSOLVE_MS)
+              );
+            }, BOOT_SETTLE_MS)
+          );
+        }, holdFor)
+      );
     });
 
     return () => {
       isCancelled = true;
+      timers.forEach((t) => window.clearTimeout(t));
     };
   }, []);
 
@@ -209,7 +338,9 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
   }, [isDesktop]);
 
   // 4. Scroll Handling:
-  // - On Desktop: Maps vertical scroll of tall 1200vh container to horizontal translation with slew-rate limiting
+  // - On Desktop: Maps vertical scroll of the tall 1200vh container to a horizontal
+  //   translation through a time-based ease with a rate ceiling, so the glide
+  //   feels the same on every refresh rate and a fling cannot skip a slide.
   // - On Mobile/Tablet: Natural vertical native scrolling with vertical scroll progress calculation
   useEffect(() => {
     if (!isLoaded) return;
@@ -223,14 +354,19 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       };
 
       window.addEventListener("scroll", onMobileScroll, { passive: true });
+      window.addEventListener("resize", onMobileScroll);
       onMobileScroll();
-      return () => window.removeEventListener("scroll", onMobileScroll);
+      return () => {
+        window.removeEventListener("scroll", onMobileScroll);
+        window.removeEventListener("resize", onMobileScroll);
+      };
     }
 
+    const reducedMotion = prefersReducedMotion();
     let animId: number;
 
     const onScroll = () => {
-      if (!isLoaded || !outerContainerRef.current) return;
+      if (!outerContainerRef.current) return;
       const outerRect = outerContainerRef.current.getBoundingClientRect();
       const totalScrollable = outerContainerRef.current.offsetHeight - window.innerHeight;
       const currentScroll = -outerRect.top;
@@ -240,70 +376,52 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    onScroll();
 
-    // Smooth loop with slew rate limit: ensures sudden trackpad flings glide with controlled luxurious inertia
-    const loop = () => {
+    let lastTime = performance.now();
+
+    const loop = (now: number) => {
+      // Clamp dt so a background tab returning does not lurch across the timeline.
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
+
       const target = targetProgressRef.current;
       const current = currentProgressRef.current;
       const diff = target - current;
 
-      if (Math.abs(diff) > 0.00005) {
-        // Max delta progress per frame (0.008 at 60fps = 0.48/sec) -> prevents instant skipping of 3-4 slides
-        const maxStep = 0.008;
-        const step = Math.sign(diff) * Math.min(Math.abs(diff * 0.09), maxStep);
-        currentProgressRef.current += step;
+      if (Math.abs(diff) > SETTLE_EPSILON) {
+        let next: number;
+        if (reducedMotion) {
+          next = target;
+        } else {
+          const alpha = 1 - Math.exp(-dt / SMOOTH_TAU);
+          let step = diff * alpha;
+          const maxStep = (jumpingRef.current ? JUMP_RATE : MAX_RATE) * dt;
+          if (Math.abs(step) > maxStep) step = Math.sign(diff) * maxStep;
+          next = current + step;
+        }
 
-        const prog = Math.min(1, Math.max(0, currentProgressRef.current));
+        const prog = Math.min(1, Math.max(0, next));
+        currentProgressRef.current = prog;
         setScrollProgress(prog);
 
         if (trackRef.current) {
-          const W = window.innerWidth;
-
-          // Pinned Timeline Stages with Dedicated Cushions for Every Screen (6 Slides total)
-          let x = 0;
-          if (prog <= 0.09) {
-            x = 0;
-          } else if (prog <= 0.13) {
-            const t = (prog - 0.09) / 0.04;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = ease * W;
-          } else if (prog <= 0.29) {
-            x = W;
-          } else if (prog <= 0.33) {
-            const t = (prog - 0.29) / 0.04;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = W + ease * W;
-          } else if (prog <= 0.39) {
-            x = 2 * W;
-          } else if (prog <= 0.42) {
-            const t = (prog - 0.39) / 0.03;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = 2 * W + ease * W;
-          } else if (prog <= 0.48) {
-            x = 3 * W;
-          } else if (prog <= 0.52) {
-            const t = (prog - 0.48) / 0.04;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = 3 * W + ease * W;
-          } else if (prog <= 0.60) {
-            x = 4 * W;
-          } else if (prog <= 0.64) {
-            const t = (prog - 0.60) / 0.04;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = 4 * W + ease * W;
-          } else if (prog <= 0.76) {
-            x = 5 * W;
-          } else if (prog <= 0.80) {
-            const t = (prog - 0.76) / 0.04;
-            const ease = 0.5 - 0.5 * Math.cos(t * Math.PI);
-            x = 5 * W + ease * W;
-          } else {
-            x = 6 * W;
-          }
-
+          const x = trackXForProgress(prog, window.innerWidth);
           setScrollX(x);
           trackRef.current.style.transform = `translate3d(-${x}px, 0, 0)`;
         }
+      } else {
+        if (current !== target) {
+          currentProgressRef.current = target;
+          setScrollProgress(target);
+          if (trackRef.current) {
+            const x = trackXForProgress(target, window.innerWidth);
+            setScrollX(x);
+            trackRef.current.style.transform = `translate3d(-${x}px, 0, 0)`;
+          }
+        }
+        jumpingRef.current = false;
       }
 
       animId = requestAnimationFrame(loop);
@@ -313,6 +431,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
 
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       cancelAnimationFrame(animId);
     };
   }, [isLoaded, isDesktop]);
@@ -323,7 +442,10 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       if (!outerContainerRef.current) return;
       const totalScrollable = outerContainerRef.current.offsetHeight - window.innerHeight;
       const targetY = prog * totalScrollable;
-      window.scrollTo({ top: targetY, behavior: "smooth" });
+      // Move the document instantly and let the glide loop carry the track:
+      // one easing curve instead of the browser's smooth scroll stacked on ours.
+      jumpingRef.current = true;
+      window.scrollTo({ top: targetY, behavior: "instant" as ScrollBehavior });
     } else {
       const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const targetY = prog * scrollable;
@@ -348,17 +470,20 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       {/* Curtis Fullscreen Navigation & Social Overlay Menu */}
       <CurtisMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
+      {/* Stage rail (desktop) / progress line (mobile) */}
+      <TimelineHUD />
+
       {/* Persistent Floating Top-Right MENU Button (Appears when scrolled past hero) */}
       {isLoaded && scrollProgress > 0.04 && !isMenuOpen && (
         <button
           onClick={() => setIsMenuOpen(true)}
-          className="fixed top-4 right-4 sm:top-6 sm:right-8 z-40 group flex items-center justify-center h-8 px-4 curtis-notch bg-[#050505]/85 backdrop-blur-md border border-[#9df133]/40 hover:bg-[#9df133] hover:text-black transition-all cursor-pointer shadow-[0_0_20px_rgba(0,0,0,0.85)] animate-in fade-in duration-200"
+          className="hud-in fixed top-4 right-4 sm:top-6 sm:right-8 z-40 group flex items-center justify-center h-8 px-4 curtis-notch bg-[#050505]/85 backdrop-blur-md border border-[#ffff00]/40 hover:bg-[#ffff00] hover:text-black transition-all cursor-pointer shadow-[0_0_20px_rgba(0,0,0,0.85)]"
         >
-          <span className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 border-t border-l border-[#9df133]" />
-          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 border-t border-r border-[#9df133]" />
-          <span className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b border-l border-[#9df133]" />
-          <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b border-r border-[#9df133]" />
-          <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#9df133] group-hover:text-black">
+          <span className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 border-t border-l border-[#ffff00]" />
+          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 border-t border-r border-[#ffff00]" />
+          <span className="absolute -bottom-0.5 -left-0.5 w-1.5 h-1.5 border-b border-l border-[#ffff00]" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 border-b border-r border-[#ffff00]" />
+          <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#ffff00] group-hover:text-black">
             MENU
           </span>
         </button>
@@ -410,7 +535,7 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
                 triggerEnd={0.53}
                 columns={14}
                 rows={9}
-                color="#9df133"
+                color="#ffff00"
               />
             </>
           )}
@@ -418,38 +543,15 @@ export default function HorizontalLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* Cyber Preloader / Boot Barrier (Blocks scroll until screens and assets are mounted) */}
-      <div
-        className={`fixed inset-0 z-50 bg-[#050505] flex flex-col items-center justify-center transition-all duration-700 ${
-          isLoaded ? "opacity-0 pointer-events-none scale-105" : "opacity-100 pointer-events-auto scale-100"
-        }`}
-      >
-        {/* Fine background grid */}
-        <div className="absolute inset-0 cyber-grid opacity-20 pointer-events-none" />
-
-        <div className="relative z-10 max-w-md w-full px-6 flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-[#9df133] animate-pulse" />
-            <span>// SYSTEM BOOT &middot; RUNTIME ENGINE</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-white mb-6">
-            PORTFOLIO / <span className="text-[#9df133]">SHIVANG</span>
-          </h1>
-
-          {/* Neon Green Progress Bar */}
-          <div className="w-full bg-white/10 rounded-full h-1.5 mb-3 overflow-hidden p-0.5 border border-white/20">
-            <div
-              className="bg-[#9df133] h-full rounded-full transition-all duration-150 shadow-[0_0_12px_#9df133]"
-              style={{ width: `${bootPercent}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between w-full font-mono text-[11px] text-white/50">
-            <span className="uppercase tracking-wider">{bootStatus}</span>
-            <span className="text-[#9df133] font-bold">{bootPercent}%</span>
-          </div>
-        </div>
-      </div>
+      {!isBooted && (
+        <BootScreen
+          percent={bootPercent}
+          status={bootStatus}
+          asset={bootAsset}
+          log={bootLog}
+          loaded={isLoaded}
+        />
+      )}
     </HorizontalScrollContext.Provider>
   );
 }

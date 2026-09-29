@@ -6,6 +6,8 @@ import { useHorizontalScroll } from "./HorizontalLayout";
 import ScrollGuidance from "./ScrollGuidance";
 
 const TOTAL_FRAMES = 181;
+// Time constant of the frame ease, in seconds (~0.19 per frame at 60Hz).
+const FRAME_TAU = 0.075;
 
 export default function ScrollyHero() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -60,7 +62,12 @@ export default function ScrollyHero() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const img = imagesRef.current[frameIdx] || imagesRef.current[0];
+    // Fall back to the nearest earlier decoded frame rather than frame 0, so a
+    // gap in the sequence holds the last pose instead of snapping back.
+    let img = imagesRef.current[frameIdx];
+    for (let i = frameIdx; i >= 0 && !(img && img.complete && img.naturalWidth > 0); i--) {
+      img = imagesRef.current[i];
+    }
     if (!img || !img.complete || img.naturalWidth === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -91,9 +98,9 @@ export default function ScrollyHero() {
       canvasH / 2,
       radius
     );
-    gradient.addColorStop(0, "rgba(5, 5, 5, 0)");
-    gradient.addColorStop(0.75, "rgba(5, 5, 5, 0.15)");
-    gradient.addColorStop(1, "rgba(5, 5, 5, 0.6)");
+    gradient.addColorStop(0, "rgba(5,5,5,0)");
+    gradient.addColorStop(0.75, "rgba(5,5,5,0.15)");
+    gradient.addColorStop(1, "rgba(5,5,5,0.6)");
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvasW, canvasH);
@@ -163,22 +170,31 @@ export default function ScrollyHero() {
     }
   }, [localProg, isDesktop, playSuccess]);
 
-  // Smooth lerp loop
+  // Smooth lerp loop. Time-based (FRAME_TAU seconds), so the sequence eases the
+  // same on a 60Hz and a 144Hz display instead of running twice as fast on the
+  // latter. Only repaints when the rounded frame actually changes.
   useEffect(() => {
     let animId: number;
+    let lastTime = performance.now();
+    let lastDrawn = -1;
 
-    const loop = () => {
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
+
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
       const diff = target - current;
 
       if (Math.abs(diff) > 0.05) {
-        currentFrameRef.current += diff * 0.18;
-        const idx = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(currentFrameRef.current)));
-        renderFrame(idx);
-      } else if (Math.round(current) !== Math.round(target)) {
+        currentFrameRef.current += diff * (1 - Math.exp(-dt / FRAME_TAU));
+      } else if (current !== target) {
         currentFrameRef.current = target;
-        const idx = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(target)));
+      }
+
+      const idx = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(currentFrameRef.current)));
+      if (idx !== lastDrawn) {
+        lastDrawn = idx;
         renderFrame(idx);
       }
 
@@ -193,7 +209,7 @@ export default function ScrollyHero() {
     <section
       id="scrolly-greeting"
       ref={sectionRef}
-      className={`relative w-full shrink-0 bg-[#050505] selection:bg-[#9df133] selection:text-black ${
+      className={`relative w-full shrink-0 bg-[#050505] selection:bg-[#ffff00] selection:text-black ${
         isDesktop
           ? "lg:w-screen lg:h-screen overflow-hidden border-x border-white/[0.06] flex flex-col items-center justify-center"
           : "h-[180vh]"

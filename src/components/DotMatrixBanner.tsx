@@ -92,13 +92,13 @@ export default function DotMatrixBanner({
             }
 
             // Draw subtle shadow dot (authentic drop shadow dot matrix in Image 2)
-            ctx.fillStyle = "rgba(10, 10, 10, 0.22)";
+            ctx.fillStyle = "rgba(10,10,10,0.22)";
             ctx.beginPath();
             ctx.arc(x + 1.2, y + 1.8 + hoverOffset, dotRadius * 0.9, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw main black dot
-            ctx.fillStyle = "rgba(10, 10, 10, 0.96)";
+            ctx.fillStyle = "rgba(10,10,10,0.96)";
             ctx.beginPath();
             ctx.arc(x, y + hoverOffset, dotRadius, 0, Math.PI * 2);
             ctx.fill();

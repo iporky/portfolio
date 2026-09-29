@@ -73,7 +73,7 @@ export default function TechMatrix() {
   };
 
   return (
-    <section id="tech-stack" className="relative w-screen xl:w-[115vw] h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#00f5d4] selection:text-black">
+    <section id="tech-stack" className="relative w-screen xl:w-[115vw] h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#ffff00] selection:text-black">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -88,13 +88,13 @@ export default function TechMatrix() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#ffff00]/10 border border-[#ffff00]/30 text-[#ffff00] font-mono text-xs tracking-wider">
               <Cpu className="w-3.5 h-3.5" />
               <span>// 04 &middot; HORIZONTAL SKILLS REEL &amp; CAPABILITIES</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
               Tools &amp; <br />
-              <span className="text-[#9df133]">
+              <span className="text-[#ffff00]">
                 Engineering Domain
               </span>
             </h2>
@@ -104,14 +104,14 @@ export default function TechMatrix() {
             <button
               onClick={scrollLeft}
               onMouseEnter={playHover}
-              className="p-2 rounded curtis-notch bg-white/[0.04] hover:bg-[#00f5d4] hover:text-black border border-white/10 transition-all cursor-pointer"
+              className="p-2 rounded curtis-notch bg-white/[0.04] hover:bg-[#ffff00] hover:text-black border border-white/10 transition-all cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={scrollRight}
               onMouseEnter={playHover}
-              className="p-2 rounded curtis-notch bg-white/[0.04] hover:bg-[#00f5d4] hover:text-black border border-white/10 transition-all cursor-pointer"
+              className="p-2 rounded curtis-notch bg-white/[0.04] hover:bg-[#ffff00] hover:text-black border border-white/10 transition-all cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -133,7 +133,7 @@ export default function TechMatrix() {
                 onMouseEnter={playHover}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded curtis-notch font-mono text-xs transition-all cursor-pointer ${
                   isSelected
-                    ? "bg-[#00f5d4] text-black font-bold shadow-[0_0_15px_rgba(0,245,212,0.4)]"
+                    ? "bg-[#ffff00] text-black font-bold shadow-[0_0_15px_rgba(255,255,0,0.4)]"
                     : "bg-white/[0.03] text-white/60 hover:text-white hover:bg-white/[0.07] border border-white/10"
                 }`}
               >
@@ -153,16 +153,16 @@ export default function TechMatrix() {
             <div
               key={skill.name}
               onMouseEnter={playHover}
-              className="shrink-0 w-72 sm:w-80 p-4 rounded-xl cyber-glass border border-white/10 hover:border-[#00f5d4]/40 transition-all flex flex-col justify-between group shadow-lg"
+              className="shrink-0 w-72 sm:w-80 p-4 rounded-xl cyber-glass border border-white/10 hover:border-[#ffff00]/40 transition-all flex flex-col justify-between group shadow-lg"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-bold text-white group-hover:text-[#00f5d4] transition-colors truncate">
+                    <span className="font-mono text-sm font-bold text-white group-hover:text-[#ffff00] transition-colors truncate">
                       <ScrambleText text={skill.name} />
                     </span>
                     {skill.hot && (
-                      <span className="flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#ff2a5f]/15 border border-[#ff2a5f]/30 text-[#ff2a5f]">
+                      <span className="flex items-center gap-0.5 text-[8px] font-mono px-1 py-0.2 rounded bg-[#ffff00]/15 border border-[#ffff00]/30 text-[#ffff00]">
                         <Sparkles className="w-2.5 h-2.5" />
                         CORE
                       </span>
@@ -180,7 +180,7 @@ export default function TechMatrix() {
 
               <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono text-white/40">
                 <span>{skill.category.toUpperCase()}</span>
-                <span className="text-[#00f5d4]">100% VERIFIED</span>
+                <span className="text-[#ffff00]">100% VERIFIED</span>
               </div>
             </div>
           ))}

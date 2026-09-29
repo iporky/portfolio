@@ -47,21 +47,21 @@ export default function ScrollScrambleQuote({
 
   return (
     <div className={`font-mono transition-all duration-100 ${className}`}>
-      <span className="text-[#9df133] mr-2 text-xs select-none">&gt;&gt;</span>
+      <span className="text-[#ffff00] mr-2 text-xs select-none">&gt;&gt;</span>
       {renderedChars.map((item, i) => (
         <span
           key={i}
           className={`transition-colors duration-150 ${
             item.isResolved
               ? "text-white/95"
-              : "text-[#9df133] drop-shadow-[0_0_6px_rgba(157,241,51,0.8)] font-bold animate-pulse"
+              : "text-[#ffff00] drop-shadow-[0_0_6px_rgba(255,255,0,0.8)] font-bold animate-pulse"
           }`}
         >
           {item.char}
         </span>
       ))}
       {ratio < 1 && (
-        <span className="inline-block w-2 h-4 ml-1 bg-[#9df133] animate-ping align-middle" />
+        <span className="inline-block w-2 h-4 ml-1 bg-[#ffff00] animate-ping align-middle" />
       )}
     </div>
   );

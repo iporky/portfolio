@@ -42,16 +42,16 @@ export default function Navbar() {
           onMouseEnter={playHover}
           className="group flex items-center gap-3 text-left focus:outline-none"
         >
-          <div className="relative flex items-center justify-center w-9 h-9 cyber-notch bg-white/[0.04] border border-white/15 group-hover:border-[#00f5d4]/60 group-hover:bg-[#00f5d4]/10 transition-colors">
-            <span className="font-mono text-sm font-bold text-[#00f5d4]">SC</span>
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#00f5d4] animate-pulse" />
+          <div className="relative flex items-center justify-center w-9 h-9 cyber-notch bg-white/[0.04] border border-white/15 group-hover:border-[#ffff00]/60 group-hover:bg-[#ffff00]/10 transition-colors">
+            <span className="font-mono text-sm font-bold text-[#ffff00]">SC</span>
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#ffff00] animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-semibold tracking-wider text-white uppercase group-hover:text-[#00f5d4] transition-colors">
+              <span className="font-mono text-xs font-semibold tracking-wider text-white uppercase group-hover:text-[#ffff00] transition-colors">
                 Shivang Chauhan
               </span>
-              <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono tracking-widest uppercase bg-[#00f5d4]/10 text-[#00f5d4] border border-[#00f5d4]/30 rounded">
+              <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono tracking-widest uppercase bg-[#ffff00]/10 text-[#ffff00] border border-[#ffff00]/30 rounded">
                 SDE III
               </span>
             </div>
@@ -87,7 +87,7 @@ export default function Navbar() {
             title={soundEnabled ? "Mute audio effects" : "Enable futuristic sound effects"}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono border transition-all ${
               soundEnabled
-                ? "bg-[#00f5d4]/15 border-[#00f5d4]/60 text-[#00f5d4] shadow-[0_0_12px_rgba(0,245,212,0.2)]"
+                ? "bg-[#ffff00]/15 border-[#ffff00]/60 text-[#ffff00] shadow-[0_0_12px_rgba(255,255,0,0.2)]"
                 : "bg-white/[0.03] border-white/10 text-white/50 hover:text-white/80 hover:border-white/20"
             }`}
           >
@@ -112,7 +112,7 @@ export default function Navbar() {
                 href={link.href}
                 onClick={playClick}
                 onMouseEnter={playHover}
-                className="hover:text-[#00f5d4] transition-colors relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#00f5d4] hover:after:w-full after:transition-all"
+                className="hover:text-[#ffff00] transition-colors relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-[#ffff00] hover:after:w-full after:transition-all"
               >
                 {link.label}
               </a>
@@ -125,7 +125,7 @@ export default function Navbar() {
             download="Shivang_Chauhan_CV.pdf"
             onClick={playClick}
             onMouseEnter={playHover}
-            className="relative group overflow-hidden px-3.5 py-1.5 text-xs font-mono font-medium text-black bg-[#00f5d4] hover:bg-[#38ffd9] transition-all duration-200 cyber-notch-sm flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,245,212,0.25)] hover:shadow-[0_0_20px_rgba(0,245,212,0.45)]"
+            className="relative group overflow-hidden px-3.5 py-1.5 text-xs font-mono font-medium text-black bg-[#ffff00] hover:bg-[#ffff00] transition-all duration-200 cyber-notch-sm flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,255,0,0.25)] hover:shadow-[0_0_20px_rgba(255,255,0,0.45)]"
           >
             <Download className="w-3.5 h-3.5" />
             <span className="tracking-wide">CV.PDF</span>
@@ -164,7 +164,7 @@ export default function Navbar() {
                   playClick();
                   setMobileMenuOpen(false);
                 }}
-                className="text-white/70 hover:text-[#00f5d4] py-1 transition-colors flex items-center justify-between"
+                className="text-white/70 hover:text-[#ffff00] py-1 transition-colors flex items-center justify-between"
               >
                 <span>{link.label}</span>
                 <span className="text-white/20 text-xs">→</span>
@@ -173,7 +173,7 @@ export default function Navbar() {
             <div className="pt-4 border-t border-white/10 flex items-center justify-between">
               <a
                 href="mailto:chauhanshivang4@gmail.com"
-                className="text-xs text-[#00f5d4] hover:underline"
+                className="text-xs text-[#ffff00] hover:underline"
               >
                 chauhanshivang4@gmail.com
               </a>

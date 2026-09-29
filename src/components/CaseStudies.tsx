@@ -19,7 +19,7 @@ export default function CaseStudies() {
       role: "SDE III",
       location: "Bangalore, India",
       tagline: "Enterprise Conversational AI Runtime & Self-Serve Ad Tech Automation",
-      color: "#00f5d4",
+      color: "#ffff00",
       highlights: [
         {
           title: "Agentic Conversational AI Runtime",
@@ -43,7 +43,7 @@ export default function CaseStudies() {
       role: "Full-Stack Engineer (Freelance / Seoul Remote)",
       location: "Seoul, South Korea (Remote)",
       tagline: "AI-Powered Korea Living Platform — Cross-Platform App & 4-Service RAG",
-      color: "#ff2a5f",
+      color: "#ffff00",
       highlights: [
         {
           title: "Solo Cross-Platform Mobile App (Android + iOS)",
@@ -67,7 +67,7 @@ export default function CaseStudies() {
       role: "Senior Software Engineer",
       location: "Bangalore, India",
       tagline: "Aviation Big Data Visualizer ($3M Saved) & NLP Resolution Engine",
-      color: "#00f0ff",
+      color: "#ffff00",
       highlights: [
         {
           title: "ViewIT — Aviation Visualizer (Saved $3M, Best Product Award)",
@@ -91,7 +91,7 @@ export default function CaseStudies() {
       role: "Software Engineer",
       location: "Chennai, India",
       tagline: "Healthcare Universal Identity Services (UIS) & High-Assurance Cryptography",
-      color: "#a855f7",
+      color: "#ffff00",
       highlights: [
         {
           title: "Universal Identity Services (UIS)",
@@ -104,7 +104,7 @@ export default function CaseStudies() {
   ];
 
   return (
-    <section id="architecture" className="relative w-screen max-w-screen h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#00f5d4] selection:text-black">
+    <section id="architecture" className="relative w-screen max-w-screen h-screen shrink-0 bg-[#050505] text-white border-r border-white/[0.06] overflow-y-auto sm:overflow-hidden flex flex-col justify-center px-6 sm:px-12 py-8 selection:bg-[#ffff00] selection:text-black">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -119,13 +119,13 @@ export default function CaseStudies() {
         {/* Section Title */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#ffff00]/10 border border-[#ffff00]/30 text-[#ffff00] font-mono text-xs tracking-wider">
               <Terminal className="w-3.5 h-3.5" />
               <span>// 05 &middot; ENTERPRISE PRODUCTION ARCHITECTURES</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
               Production Architectures &amp; <br />
-              <span className="text-[#9df133]">
+              <span className="text-[#ffff00]">
                 Enterprise Systems
               </span>
             </h2>
@@ -181,7 +181,7 @@ export default function CaseStudies() {
                 </div>
 
                 {/* Architecture Diagram snippet */}
-                <div className="mb-3 p-2 rounded bg-black/80 border border-white/10 font-mono text-[10px] text-[#00f5d4]/90 overflow-x-auto">
+                <div className="mb-3 p-2 rounded bg-black/80 border border-white/10 font-mono text-[10px] text-[#ffff00]/90 overflow-x-auto">
                   <pre className="whitespace-pre leading-relaxed">{proj.architectureDiagram}</pre>
                 </div>
 

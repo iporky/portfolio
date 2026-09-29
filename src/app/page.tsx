@@ -13,7 +13,7 @@ import AboutSection from "@/components/AboutSection";
 export default function Home() {
   return (
     <SoundProvider>
-      <div id="top" className="relative bg-[#050505] text-white selection:bg-[#9df133] selection:text-black">
+      <div id="top" className="relative bg-[#050505] text-white selection:bg-[#ffff00] selection:text-black">
         {/* Full Horizontal-Scrolling Engine (Converts mouse wheel scroll into horizontal timeline glide) */}
         <HorizontalLayout>
           {/* Slide 1: Curtis-Style Hero Landing Page (Freestanding Portrait + Scroll-Scramble Quote & Headline + Direction Cue) */}
@@ -22,7 +22,7 @@ export default function Home() {
           {/* Slide 2: 181-Frame Canvas Scrollytelling Centerpiece (Pinned, Frames 1-181 Full Sequence) */}
           <ScrollyHero />
 
-          {/* Slide 3: Acid-Green Modular Bento Tiles (Reference Image 4: 30+ Products, 10+ Years, Claude, Figma, etc.) */}
+          {/* Slide 3: Neon-Yellow Modular Bento Tiles (Reference Image 4: 30+ Products, 10+ Years, Claude, Figma, etc.) */}
           <BentoTilesSection />
 
           {/* Slide 4: Selected Products & Live Platforms (Konnect App, Konnect Web, Treks For All, Magnum) */}

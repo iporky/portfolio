@@ -5,19 +5,19 @@
 :root {
   --bg-primary: #050505;
   --bg-surface: #0a0d17;
-  --accent-cyan: #00f5d4;
-  --accent-neon-green: #00ff66;
-  --accent-teal: #00f0ff;
-  --accent-crimson: #ff2a5f;
-  --text-main: rgba(255, 255, 255, 0.95);
-  --text-muted: rgba(255, 255, 255, 0.60);
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --accent-cyan: #ffff00;
+  --accent-neon-green: #ffff00;
+  --accent-teal: #ffff00;
+  --accent-crimson: #ffff00;
+  --text-main: rgba(255,255,255,0.95);
+  --text-muted: rgba(255,255,255,0.60);
+  --border-subtle: rgba(255,255,255,0.08);
 
   /* Curtis Nguyen Signature Stat Stage & Tools Tokens */
-  --primary-green-neon: #9df133;
-  --primary-green-box: #84c72f;
-  --primary-green-box-stroke: #599f00;
-  --primary-green-line: rgba(89, 159, 0, 0.35);
+  --primary-green-neon: #ffff00;
+  --primary-green-box: #e0d000;
+  --primary-green-box-stroke: #a09400;
+  --primary-green-line: rgba(160,148,0,0.35);
   --curtis-black-box: #0a0a0a;
   --curtis-black-stroke: #000000;
   --curtis-notch-shape: polygon(
@@ -41,19 +41,22 @@ html {
   background-color: var(--bg-primary);
   color: var(--text-main);
   scroll-behavior: smooth;
+  /* No rubber-band at the ends of the timeline; the engine owns the edges. */
+  overscroll-behavior: none;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   overflow-x: hidden;
+  overscroll-behavior: none;
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  selection-background-color: #9df133;
+  selection-background-color: #ffff00;
   selection-color: #050505;
 }
 
 ::selection {
-  background: #9df133;
+  background: #ffff00;
   color: #050505;
 }
 
@@ -68,12 +71,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 245, 212, 0.3);
+  background: rgba(255,255,0,0.3);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 245, 212, 0.7);
+  background: rgba(255,255,0,0.7);
 }
 
 /* Curtis Vertical Guidelines (6 Columns across full viewport) */
@@ -91,9 +94,9 @@ body {
   height: 100%;
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.07) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.07) 50%,
+    rgba(255,255,255,0.04) 100%
   );
 }
 
@@ -142,29 +145,158 @@ body {
     to bottom,
     rgba(255,255,255,0),
     rgba(255,255,255,0) 50%,
-    rgba(0, 0, 0, 0.35) 50%,
-    rgba(0, 0, 0, 0.35)
+    rgba(0,0,0,0.35) 50%,
+    rgba(0,0,0,0.35)
   );
   background-size: 100% 4px;
 }
 
 /* Subtle CRT Chromatic Aberration */
 .crt-rgb {
-  filter: drop-shadow(2px 0 0 rgba(255, 0, 85, 0.4)) drop-shadow(-2px 0 0 rgba(0, 245, 212, 0.4));
+  filter: drop-shadow(2px 0 0 rgba(255,255,0,0.4)) drop-shadow(-2px 0 0 rgba(255,255,0,0.4));
 }
 
 /* Cyber Grid Backgrounds */
 .cyber-grid {
   background-size: 40px 40px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
 }
 
-/* Glassmorphism Panel */
+/* Glassmorphism Panel. The blur radius is kept modest: these cards ride on
+   the translating track, so the backdrop is re-blurred every frame. */
 .cyber-glass {
-  background: rgba(10, 13, 23, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10,13,23,0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion                                                                  */
+/* ---------------------------------------------------------------------- */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Floating HUD elements (MENU button, stage rail) settle in rather than pop. */
+@keyframes hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hud-in {
+  animation: hud-in 0.45s var(--ease-out-expo) both;
+}
+
+/* Boot log lines slide up as they are appended. */
+@keyframes boot-line {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.boot-line {
+  animation: boot-line 0.35s var(--ease-out-expo) both;
+}
+
+/* Hero entrance after the boot barrier lifts. */
+.hero-enter {
+  transition-property: opacity, transform;
+  transition-duration: 0.8s;
+  transition-timing-function: var(--ease-out-expo);
+}
+
+/* Menu drawer settles in from its top-right anchor. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.menu-in {
+  animation: menu-in 0.28s var(--ease-out-expo) both;
+}
+
+/* A single faint scan line drifting down a screen. */
+@keyframes beam-y {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100vh);
+  }
+}
+
+.beam-y {
+  animation: beam-y 7s linear infinite;
+}
+
+/* Hazard stripes on the garage door: an oversized strip translated in a loop
+   so only the compositor works, not the painter. */
+.hazard-stripes {
+  background: repeating-linear-gradient(135deg, #0a0a0a 0 8px, #ffff00 8px 16px);
+  animation: stripes-move 0.9s linear infinite;
+}
+
+@keyframes stripes-move {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-22.6px);
+  }
+}
+
+/* Occasional CRT flicker for overlay textures. */
+@keyframes flicker {
+  0%, 92%, 100% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.55;
+  }
+  95% {
+    opacity: 0.9;
+  }
+  97% {
+    opacity: 0.6;
+  }
+}
+
+.flicker {
+  animation: flicker 6s linear infinite;
+}
+
+/* Respect the OS motion preference: the timeline snaps instead of gliding
+   (handled in the engine) and decorative motion is collapsed here. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

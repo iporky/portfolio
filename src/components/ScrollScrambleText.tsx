@@ -84,12 +84,12 @@ export default function ScrollScrambleText({
 
   return (
     <Component className={`${className} transition-opacity duration-200`}>
-      {prefix && <span className="text-[#9df133] mr-2">{prefix}</span>}
-      <span className={isFullyResolved ? "" : "text-[#9df133] font-mono drop-shadow-[0_0_8px_rgba(157,241,51,0.4)]"}>
+      {prefix && <span className="text-[#ffff00] mr-2">{prefix}</span>}
+      <span className={isFullyResolved ? "" : "text-[#ffff00] font-mono drop-shadow-[0_0_8px_rgba(255,255,0,0.4)]"}>
         {result.display}
       </span>
       {!isFullyResolved && (
-        <span className="inline-block w-2 h-4 ml-1 bg-[#9df133] animate-pulse align-middle" />
+        <span className="inline-block w-2 h-4 ml-1 bg-[#ffff00] animate-pulse align-middle" />
       )}
     </Component>
   );

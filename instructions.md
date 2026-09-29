@@ -84,15 +84,17 @@
 ---
 
 ## 5. Strict Behavioral & Design Constraints for Future Pair Programming
+> **Palette (updated 2026-09-29, owner's request):** the site is black and neon yellow. Page/accent yellow `#ffff00`, hover yellow `#ffff66`, tile fill `#e0d000`, tile stroke `#a09400`, black `#0a0a0a` / `#050505`. No green, chartreuse, cyan or purple anywhere; the colour rules below have been rewritten to this palette.
+
 1. **NO Photoshop or Illustrator**: Never include graphic/print design tools (such as Photoshop, Illustrator, InDesign) in Shivang's skill set, capabilities sections, or bio. He is a full-stack software engineer and AI systems architect.
 2. **Authoritative Contact Data**: Always use:
    - Phone: `+91 91767 88879`
    - Email: `chauhanshivang4@gmail.com`
    - Location: `Bangalore, India`
 3. **Pacing & Animation Rule**: All visual tiles, animations, rolling odometers, and aperture reveals must be **100% completed and resting early** in their respective pinned stage (by ~60% of stage scroll progress), providing a generous **40% idle cushion** so content is never cut off, clipped, or scrambling when screen transitions begin.
-4. **Visual Design Integrity**: Retain the Curtis Nguyen aesthetic: horizontal scrolling, neon chartreuse `#9df133`, pitch black `#0a0a0a`, 5-column alternating staggered tiles with authentic left-edge notch cutouts, rolling vertical odometer numbers, and right-to-left pixel wipes.
-5. **Tile Colors & Pitch Black on Hover**: Tiles must use the olive-green theme (`#84c72f` fill, `#599f00` stroke, `#0a0a0a` text) by default, and change color to **pitch black (`#0a0a0a` fill, `#000000` stroke, crisp white text, and `#9df133` illuminated fold)** strictly on hover. Zero purple anywhere in the portfolio.
-6. **Neon Green Only on Projects Page**: All hover states, accents, icons, and card title highlights on the Selected Products / Projects page must strictly use neon green (`#9df133`). Zero bluish green or cyan on hover.
+4. **Visual Design Integrity**: Retain the Curtis Nguyen aesthetic: horizontal scrolling, neon yellow `#ffff00`, pitch black `#0a0a0a`, 5-column alternating staggered tiles with authentic left-edge notch cutouts, rolling vertical odometer numbers, and right-to-left pixel wipes.
+5. **Tile Colors & Pitch Black on Hover**: Tiles must use the mustard-yellow theme (`#e0d000` fill, `#a09400` stroke, `#0a0a0a` text) by default, and change color to **pitch black (`#0a0a0a` fill, `#000000` stroke, crisp white text, and `#ffff00` illuminated fold)** strictly on hover. Zero purple anywhere in the portfolio.
+6. **Neon Yellow Only on Projects Page**: All hover states, accents, icons, and card title highlights on the Selected Products / Projects page must strictly use neon yellow (`#ffff00`). Zero bluish green or cyan on hover.
 7. **Scroll-Driven Staggered Card Entrance**: Cards on the Selected Products / Live Platforms page must appear one by one sequentially tied to user scroll, with a tight, brisk pinned duration so the page does not drag or stay for too many scrolls.
 
 

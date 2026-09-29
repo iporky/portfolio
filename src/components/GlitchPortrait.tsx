@@ -117,7 +117,7 @@ export default function GlitchPortrait({ className = "" }: GlitchPortraitProps) 
           }}
         />
 
-        {/* Glitch RGB-Shift Layer 1 (Neon Green / Magenta Slice) */}
+        {/* Glitch RGB-Shift Layer 1 (Neon Yellow / Magenta Slice) */}
         {isGlitching && (
           <>
             <div
@@ -141,7 +141,7 @@ export default function GlitchPortrait({ className = "" }: GlitchPortraitProps) 
               className="absolute inset-0 pointer-events-none mix-blend-screen opacity-80"
               style={{
                 transform: "translate(3px, -2px)",
-                filter: "drop-shadow(-2px 0 0 #9df133)",
+                filter: "drop-shadow(-2px 0 0 #ffff00)",
                 clipPath: "polygon(0 55%, 100% 55%, 100% 75%, 0 75%)",
               }}
             >
@@ -176,7 +176,7 @@ export default function GlitchPortrait({ className = "" }: GlitchPortraitProps) 
         <div
           className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay"
           style={{
-            backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.45) 0.5px, transparent 0.5px)",
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.45) 0.5px, transparent 0.5px)",
             backgroundSize: "2.5px 2.5px",
           }}
         />
@@ -185,14 +185,14 @@ export default function GlitchPortrait({ className = "" }: GlitchPortraitProps) 
         <div
           className="absolute inset-0 pointer-events-none opacity-35 mix-blend-multiply"
           style={{
-            backgroundImage: "repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.75) 0px, rgba(0, 0, 0, 0.75) 1px, transparent 1px, transparent 2px)",
+            backgroundImage: "repeating-linear-gradient(to bottom, rgba(0,0,0,0.75) 0px, rgba(0,0,0,0.75) 1px, transparent 1px, transparent 2px)",
           }}
         />
 
         {/* Horizontal Neon Glitch Line */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
-            className={`w-full h-1 bg-gradient-to-r from-transparent via-[#9df133]/50 to-transparent transition-all duration-700 ${
+            className={`w-full h-1 bg-gradient-to-r from-transparent via-[#ffff00]/50 to-transparent transition-all duration-700 ${
               isGlitching ? "opacity-100 top-1/3" : "opacity-0 top-0"
             }`}
             style={{ position: "absolute" }}
@@ -202,7 +202,7 @@ export default function GlitchPortrait({ className = "" }: GlitchPortraitProps) 
         {/* Fluid hover cursor light tracker */}
         {isHovered && (
           <div
-            className="absolute w-48 h-48 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2 blur-2xl opacity-25 transition-opacity bg-[#9df133]"
+            className="absolute w-48 h-48 rounded-full pointer-events-none -translate-x-1/2 -translate-y-1/2 blur-2xl opacity-25 transition-opacity bg-[#ffff00]"
             style={{
               left: `${mousePos.x * 100}%`,
               top: `${mousePos.y * 100}%`,

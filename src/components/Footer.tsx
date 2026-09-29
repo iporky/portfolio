@@ -49,13 +49,13 @@ export default function Footer() {
       <div className="absolute inset-0 cyber-grid opacity-30 pointer-events-none" />
 
       {/* Ambient Top Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-b from-[#00f5d4]/10 to-transparent blur-2xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-b from-[#ffff00]/10 to-transparent blur-2xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Call To Action Banner */}
         <div className="p-8 sm:p-12 rounded-2xl cyber-glass border border-white/15 mb-16 relative overflow-hidden">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-4 rounded cyber-notch-sm bg-[#00f5d4]/10 border border-[#00f5d4]/30 text-[#00f5d4] font-mono text-xs tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-4 rounded cyber-notch-sm bg-[#ffff00]/10 border border-[#ffff00]/30 text-[#ffff00] font-mono text-xs tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>// 06 · INITIATE TRANSMISSION</span>
             </div>
@@ -71,7 +71,7 @@ export default function Footer() {
               <button
                 onClick={handleCopyEmail}
                 onMouseEnter={playHover}
-                className="px-5 py-3 rounded cyber-notch font-mono text-xs font-bold text-black bg-[#00f5d4] hover:bg-[#38ffd9] transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(0,245,212,0.35)]"
+                className="px-5 py-3 rounded cyber-notch font-mono text-xs font-bold text-black bg-[#ffff00] hover:bg-[#ffff00] transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,0,0.35)]"
               >
                 {copiedEmail ? <Check className="w-4 h-4 text-black" /> : <Copy className="w-4 h-4 text-black" />}
                 <span>{copiedEmail ? "EMAIL COPIED TO CLIPBOARD!" : "COPY EMAIL (CHAUHANSHIVANG4@GMAIL.COM)"}</span>
@@ -97,7 +97,7 @@ export default function Footer() {
           {/* Email Box */}
           <div className="p-5 rounded-lg bg-white/[0.02] border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded bg-[#00f5d4]/10 text-[#00f5d4]">
+              <div className="p-2 rounded bg-[#ffff00]/10 text-[#ffff00]">
                 <Mail className="w-4 h-4" />
               </div>
               <div>
@@ -105,7 +105,7 @@ export default function Footer() {
                 <a
                   href={`mailto:${email}`}
                   onClick={playClick}
-                  className="text-white hover:text-[#00f5d4] transition-colors"
+                  className="text-white hover:text-[#ffff00] transition-colors"
                 >
                   {email}
                 </a>
@@ -116,14 +116,14 @@ export default function Footer() {
               className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
               title="Copy email"
             >
-              {copiedEmail ? <Check className="w-3.5 h-3.5 text-[#00f5d4]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedEmail ? <Check className="w-3.5 h-3.5 text-[#ffff00]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
 
           {/* Phone Box */}
           <div className="p-5 rounded-lg bg-white/[0.02] border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded bg-[#ff2a5f]/10 text-[#ff2a5f]">
+              <div className="p-2 rounded bg-[#ffff00]/10 text-[#ffff00]">
                 <Phone className="w-4 h-4" />
               </div>
               <div>
@@ -131,7 +131,7 @@ export default function Footer() {
                 <a
                   href={`tel:${phone.replace(/\s+/g, "")}`}
                   onClick={playClick}
-                  className="text-white hover:text-[#ff2a5f] transition-colors"
+                  className="text-white hover:text-[#ffff00] transition-colors"
                 >
                   {phone}
                 </a>
@@ -142,14 +142,14 @@ export default function Footer() {
               className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
               title="Copy phone"
             >
-              {copiedPhone ? <Check className="w-3.5 h-3.5 text-[#ff2a5f]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedPhone ? <Check className="w-3.5 h-3.5 text-[#ffff00]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
 
           {/* Location Box */}
           <div className="p-5 rounded-lg bg-white/[0.02] border border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded bg-[#00f0ff]/10 text-[#00f0ff]">
+              <div className="p-2 rounded bg-[#ffff00]/10 text-[#ffff00]">
                 <MapPin className="w-4 h-4" />
               </div>
               <div>
@@ -166,7 +166,7 @@ export default function Footer() {
         {/* Bottom Legal & Back to Top Bar */}
         <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs text-white/40">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#00f5d4] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#ffff00] animate-pulse" />
             <span>© 2026 SHIVANG CHAUHAN // ALL SYSTEMS OPERATIONAL</span>
           </div>
 
@@ -189,7 +189,7 @@ export default function Footer() {
             <button
               onClick={scrollToTop}
               onMouseEnter={playHover}
-              className="flex items-center gap-1.5 text-white/60 hover:text-[#00f5d4] transition-colors"
+              className="flex items-center gap-1.5 text-white/60 hover:text-[#ffff00] transition-colors"
             >
               <span>BACK TO TOP</span>
               <ArrowUp className="w-3.5 h-3.5" />

@@ -44,7 +44,7 @@ export default function SelectedProducts() {
       url: "https://play.google.com/store/apps/details?id=com.konnect.kr&hl=en_IN",
       image: "/projects/konnect_app_banner.png",
       imageType: "photo",
-      accent: "#9df133",
+      accent: "#ffff00",
       threshold: 0.522,
       desc: "Solo cross-platform mobile app in React Native/Expo featuring AI travel companion Kiki. Firebase auth, streaming NDJSON search, EN/KR i18n, voice search, and signed Play Store release pipelines.",
       tags: ["React Native", "Expo", "Travel with Kiki", "NDJSON", "Play Store"],
@@ -57,7 +57,7 @@ export default function SelectedProducts() {
       image: "/projects/konnect_logo.png",
       imageType: "logo",
       whiteBg: true,
-      accent: "#ff2a5f",
+      accent: "#ffff00",
       threshold: 0.538,
       desc: "Korea's leading foreigner living portal. 4-service FastAPI microservices over Kafka, pgvector, Redis, and bilingual RAG with Google GenAI & Naver.",
       tags: ["FastAPI", "Kafka", "pgvector", "Redis", "Google GenAI"],
@@ -69,7 +69,7 @@ export default function SelectedProducts() {
       url: "https://treksforall.in",
       image: "/projects/treksforall.webp",
       imageType: "photo",
-      accent: "#9df133",
+      accent: "#ffff00",
       threshold: 0.554,
       desc: "Inclusive adaptive travel platform making the outdoors barrier-free for persons with disabilities. Himalayan treks, accessible river expeditions, and camps.",
       tags: ["Inclusive Travel", "Next.js", "Social Impact", "High Performance"],
@@ -82,7 +82,7 @@ export default function SelectedProducts() {
       image: "/projects/magnum_logo.png",
       imageType: "logo",
       whiteBg: true,
-      accent: "#f59e0b",
+      accent: "#ffff00",
       threshold: 0.570,
       desc: "Custom publishing portal delivering 360-degree editorial, layout, cover design, and book production with 500+ published titles.",
       tags: ["Editorial", "Next.js", "Cover Design", "500+ Books"],
@@ -91,7 +91,7 @@ export default function SelectedProducts() {
   ];
 
   return (
-    <section id="selected-products" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white border-t lg:border-t-0 lg:border-r border-white/[0.06] overflow-visible lg:overflow-hidden flex flex-col justify-center px-4 sm:px-8 lg:px-12 py-16 lg:py-8 selection:bg-[#9df133] selection:text-black">
+    <section id="selected-products" className="relative w-full lg:w-screen max-w-screen h-auto min-h-screen lg:h-screen shrink-0 bg-[#050505] text-white border-t lg:border-t-0 lg:border-r border-white/[0.06] overflow-visible lg:overflow-hidden flex flex-col justify-center px-4 sm:px-8 lg:px-12 py-16 lg:py-8 selection:bg-[#ffff00] selection:text-black">
       {/* 6-Column Vertical Guidelines */}
       <div className="shared-grid-lines">
         <div className="shared-v-line" />
@@ -106,13 +106,13 @@ export default function SelectedProducts() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#9df133]/10 border border-[#9df133]/30 text-[#9df133] font-mono text-xs tracking-wider">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 mb-2 rounded cyber-notch-sm bg-[#ffff00]/10 border border-[#ffff00]/30 text-[#ffff00] font-mono text-xs tracking-wider">
               <Sparkles className="w-3.5 h-3.5" />
               <span>// 02 &middot; SELECTED PRODUCTS &amp; APPS</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
               Production Apps &amp; <br />
-              <span className="text-[#9df133]">
+              <span className="text-[#ffff00]">
                 Live Platforms
               </span>
             </h2>
@@ -140,7 +140,7 @@ export default function SelectedProducts() {
                   filter: isRevealed ? "blur(0px)" : "blur(4px)",
                   transition: "transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.55s ease-out, filter 0.55s ease-out",
                 }}
-                className="group relative rounded-xl cyber-glass border border-white/10 hover:border-[#9df133]/50 hover:shadow-[0_0_25px_rgba(157,241,51,0.12)] transition-all duration-300 p-5 flex flex-col justify-between overflow-hidden shadow-xl"
+                className="group relative rounded-xl cyber-glass border border-white/10 hover:border-[#ffff00]/50 hover:shadow-[0_0_25px_rgba(255,255,0,0.12)] transition-all duration-300 p-5 flex flex-col justify-between overflow-hidden shadow-xl"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -160,7 +160,7 @@ export default function SelectedProducts() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={playClick}
-                      className="p-1.5 rounded cyber-notch-sm bg-white/[0.04] hover:bg-[#9df133]/15 text-white/70 hover:text-[#9df133] border border-white/10 hover:border-[#9df133]/40 transition-all font-mono text-[10px] flex items-center gap-1"
+                      className="p-1.5 rounded cyber-notch-sm bg-white/[0.04] hover:bg-[#ffff00]/15 text-white/70 hover:text-[#ffff00] border border-white/10 hover:border-[#ffff00]/40 transition-all font-mono text-[10px] flex items-center gap-1"
                     >
                       <span>LIVE</span>
                       <ExternalLink className="w-3 h-3" />
@@ -200,8 +200,8 @@ export default function SelectedProducts() {
                   </div>
 
                   <div className="flex items-center gap-2 mb-1.5">
-                    <Icon className="w-4 h-4 shrink-0 transition-colors group-hover:!text-[#9df133]" style={{ color: prod.accent }} />
-                    <h3 className="text-base font-bold font-mono text-white group-hover:text-[#9df133] transition-colors truncate">
+                    <Icon className="w-4 h-4 shrink-0 transition-colors group-hover:!text-[#ffff00]" style={{ color: prod.accent }} />
+                    <h3 className="text-base font-bold font-mono text-white group-hover:text-[#ffff00] transition-colors truncate">
                       <ScrambleText text={prod.title} />
                     </h3>
                   </div>
